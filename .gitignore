@@ -22,6 +22,9 @@ application-local.yml
 # Database dumps/backups
 backups/
 *.sql
+!backups/
+backups/*
+!backups/final_finance_20260330.sql
 
 # Build caches
 .m2repo/
