@@ -1,0 +1,27 @@
+# Maven
+target/
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Local env and secrets
+.env
+.env.*
+application-local.yml
+
+# Database dumps/backups
+backups/
+*.sql
+
+# Build caches
+.m2repo/

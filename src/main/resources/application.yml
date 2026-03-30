@@ -1,0 +1,47 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: final-finance-backend
+  datasource:
+    url: jdbc:mysql://localhost:3306/final_finance?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8
+    username: root
+    password: 1q2w3e4r
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jackson:
+    default-property-inclusion: non_null
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+  cache:
+    cache-names:
+      - quotes
+      - histories
+      - fundamentals
+
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+    default-fetch-size: 100
+    default-statement-timeout: 30
+
+market:
+  yahoo:
+    base-url: https://query1.finance.yahoo.com
+    quote-cache-ttl-seconds: 60
+    history-cache-ttl-seconds: 600
+    fundamentals-cache-ttl-seconds: 1800
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
