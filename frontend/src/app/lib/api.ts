@@ -149,3 +149,10 @@ export function createTransaction(body: CreateTransactionRequest) {
     body: JSON.stringify(body),
   });
 }
+
+export function rechargeWallet(amount: number) {
+  return request<number>("/api/wallet/recharge", {
+    method: "POST",
+    body: JSON.stringify({ amount }),
+  });
+}

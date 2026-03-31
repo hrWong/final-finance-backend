@@ -9,7 +9,7 @@ import { TransactionsTable } from "../components/TransactionsTable";
 import { AboutCompany } from "../components/AboutCompany";
 import { BuyModal } from "../components/BuyModal";
 import { SellModal } from "../components/SellModal";
-import { getAsset, getPortfolio, getStockOverview, getStockPosition, getStockTransactions } from "../lib/api";
+import { getAsset, getPortfolio, getStockOverview, getStockPosition, getStockTransactions, getDashboardSummary } from "../lib/api";
 import { formatMoney, formatPercent } from "../lib/formatters";
 import { getInstrumentIcon } from "../lib/instruments";
 import type {
@@ -18,6 +18,7 @@ import type {
   PositionResponse,
   StockOverviewResponse,
   TransactionResponse,
+  DashboardSummaryResponse,
 } from "../lib/types";
 
 export function StockDetailPage() {
@@ -28,16 +29,18 @@ export function StockDetailPage() {
   const [position, setPosition] = useState<PositionResponse | null>(null);
   const [transactions, setTransactions] = useState<TransactionResponse[] | null>(null);
   const [portfolio, setPortfolio] = useState<CurrentPortfolioResponse | null>(null);
+  const [summary, setSummary] = useState<DashboardSummaryResponse | null>(null);
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [showSellModal, setShowSellModal] = useState(false);
 
   const loadStockPage = useCallback(async () => {
-    const [overviewData, assetData, positionData, transactionData, portfolioData] = await Promise.all([
+    const [overviewData, assetData, positionData, transactionData, portfolioData, summaryData] = await Promise.all([
       getStockOverview(normalizedSymbol),
       getAsset(normalizedSymbol),
       getStockPosition(normalizedSymbol),
       getStockTransactions(normalizedSymbol),
       getPortfolio(),
+      getDashboardSummary(),
     ]);
 
     setOverview(overviewData);
@@ -45,6 +48,7 @@ export function StockDetailPage() {
     setPosition(positionData);
     setTransactions(transactionData);
     setPortfolio(portfolioData);
+    setSummary(summaryData);
   }, [normalizedSymbol]);
 
   useEffect(() => {
@@ -215,6 +219,7 @@ export function StockDetailPage() {
             currentPrice: overview?.lastPrice?.toString() || "0",
             currency: displayCurrency,
           }}
+          currentBalance={summary?.cash ?? undefined}
           onClose={() => setShowBuyModal(false)}
           onSuccess={loadStockPage}
         />

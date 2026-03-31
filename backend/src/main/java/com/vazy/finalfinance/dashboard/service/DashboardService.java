@@ -8,6 +8,8 @@ import com.vazy.finalfinance.portfolio.entity.Portfolio;
 import com.vazy.finalfinance.portfolio.mapper.PortfolioMapper;
 import com.vazy.finalfinance.position.entity.PortfolioPosition;
 import com.vazy.finalfinance.position.mapper.PortfolioPositionMapper;
+import com.vazy.finalfinance.wallet.mapper.WalletMapper;
+import com.vazy.finalfinance.wallet.entity.WalletAccount;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -26,7 +28,12 @@ public class DashboardService {
     private final PortfolioMapper portfolioMapper;
     private final AssetMapper assetMapper;
 
+    private final WalletMapper walletMapper;
+
     public DashboardSummaryResponse getSummary() {
+        WalletAccount account = walletMapper.getWalletByUserId("default_user");
+        BigDecimal cash = account != null ? account.getBalance() : BigDecimal.ZERO;
+
         Portfolio portfolio = portfolioMapper.findDefaultPortfolio();
         String baseCurrency = portfolio != null ? portfolio.getBaseCurrency() : "USD";
 
@@ -36,7 +43,7 @@ public class DashboardService {
                     BigDecimal.ZERO, BigDecimal.ZERO,
                     BigDecimal.ZERO, BigDecimal.ZERO,
                     BigDecimal.ZERO, BigDecimal.ZERO,
-                    BigDecimal.ZERO, baseCurrency
+                    cash, baseCurrency
             );
         }
 
@@ -61,7 +68,7 @@ public class DashboardService {
                 totalPnlPct,
                 BigDecimal.ZERO,  // dailyPnl — 需要实时行情才能算
                 BigDecimal.ZERO,  // dailyPnlPct
-                BigDecimal.ZERO,  // cash
+                cash,
                 baseCurrency
         );
     }

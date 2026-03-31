@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vazy.finalfinance.wallet.mapper.WalletMapper">
+
+    <select id="getWalletByUserId" resultType="com.vazy.finalfinance.wallet.entity.WalletAccount">
+        SELECT * FROM wallet_account WHERE user_id = #{userId} LIMIT 1
+    </select>
+
+    <insert id="createWallet" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO wallet_account (user_id, balance) VALUES (#{userId}, #{balance})
+    </insert>
+
+    <update id="addBalance">
+        UPDATE wallet_account 
+        SET balance = balance + #{amount}
+        WHERE user_id = #{userId}
+    </update>
+
+</mapper>

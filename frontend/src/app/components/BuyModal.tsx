@@ -10,6 +10,7 @@ interface BuyModalProps {
     currentPrice: string;
     currency?: string;
   };
+  currentBalance?: number;
   onClose: () => void;
   onSuccess?: () => void;
 }
@@ -25,7 +26,7 @@ function extractNumericValue(value: string) {
   return value.replace(/[^\d.]/g, "");
 }
 
-export function BuyModal({ stock, onClose, onSuccess }: BuyModalProps) {
+export function BuyModal({ stock, currentBalance, onClose, onSuccess }: BuyModalProps) {
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split("T")[0],
     shares: "",
@@ -43,13 +44,12 @@ export function BuyModal({ stock, onClose, onSuccess }: BuyModalProps) {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const calculateTotal = () => {
-    const shares = parseFloat(formData.shares) || 0;
-    const price = parseFloat(formData.price) || 0;
-    const commission = parseFloat(formData.commission) || 0;
-    const tax = parseFloat(formData.tax) || 0;
-    return (shares * price + commission + tax).toFixed(2);
-  };
+  const shares = parseFloat(formData.shares) || 0;
+  const price = parseFloat(formData.price) || 0;
+  const commission = parseFloat(formData.commission) || 0;
+  const tax = parseFloat(formData.tax) || 0;
+  const totalVal = shares * price + commission + tax;
+  const isInsufficient = currentBalance !== undefined && totalVal > currentBalance;
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -237,9 +237,21 @@ export function BuyModal({ stock, onClose, onSuccess }: BuyModalProps) {
                 <span>税费:</span>
                 <span>{currencySymbol}{parseFloat(formData.tax || "0").toFixed(2)}</span>
               </div>
-              <div className="pt-2 border-t border-blue-200 flex justify-between text-lg font-semibold text-gray-900">
-                <span>总计:</span>
-                <span className="text-blue-600">{currencySymbol}{calculateTotal()}</span>
+              <div className="pt-2 border-t border-blue-200 flex flex-col gap-1">
+                <div className="flex justify-between text-lg font-semibold text-gray-900">
+                  <span>总计:</span>
+                  <span className={isInsufficient ? "text-red-500" : "text-blue-600"}>
+                    {currencySymbol}{totalVal.toFixed(2)}
+                  </span>
+                </div>
+                {currentBalance !== undefined && (
+                  <div className="flex justify-between text-sm text-gray-500">
+                    <span>可用余额:</span>
+                    <span className={isInsufficient ? "text-red-500 font-medium" : ""}>
+                      {currencySymbol}{currentBalance.toFixed(2)}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -260,10 +272,14 @@ export function BuyModal({ stock, onClose, onSuccess }: BuyModalProps) {
             </button>
             <button
               type="submit"
-              disabled={submitting}
-              className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors disabled:bg-blue-300"
+              disabled={submitting || isInsufficient}
+              className={`flex-1 px-6 py-3 text-white rounded-lg text-sm font-medium transition-colors ${
+                isInsufficient
+                  ? "bg-red-400 cursor-not-allowed"
+                  : "bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300"
+              }`}
             >
-              {submitting ? "提交中..." : "确认买入"}
+              {submitting ? "提交中..." : isInsufficient ? "余额不足" : "确认买入"}
             </button>
           </div>
         </form>

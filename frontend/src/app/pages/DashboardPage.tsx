@@ -4,6 +4,7 @@ import { StatsCards } from "../components/StatsCards";
 import { PortfolioChart } from "../components/PortfolioChart";
 import { PortfolioTable } from "../components/PortfolioTable";
 import { MarketMovers } from "../components/MarketMovers";
+import { RechargeModal } from "../components/RechargeModal";
 import { getDashboardAllocation, getDashboardSummary, getMarketMovers } from "../lib/api";
 import type { AllocationItemResponse, DashboardSummaryResponse, MarketMoverResponse } from "../lib/types";
 
@@ -11,6 +12,12 @@ export function DashboardPage() {
   const [summary, setSummary] = useState<DashboardSummaryResponse | null>(null);
   const [allocation, setAllocation] = useState<AllocationItemResponse[] | null>(null);
   const [movers, setMovers] = useState<MarketMoverResponse[] | null>(null);
+  const [showRechargeModal, setShowRechargeModal] = useState(false);
+
+  const fetchSummary = async () => {
+    const data = await getDashboardSummary();
+    if (data) setSummary(data);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -47,7 +54,7 @@ export function DashboardPage() {
         </button>
       </div>
 
-      <StatsCards summary={summary} />
+      <StatsCards summary={summary} onRecharge={() => setShowRechargeModal(true)} />
 
       <div className="bg-white rounded-2xl shadow-sm p-8 mt-6">
         <div className="flex items-center justify-between mb-8">
@@ -64,6 +71,15 @@ export function DashboardPage() {
       </div>
 
       <MarketMovers movers={movers} />
+
+      {showRechargeModal && (
+        <RechargeModal
+          currentBalance={summary?.cash ?? "0"}
+          currency={summary?.baseCurrency ?? "USD"}
+          onClose={() => setShowRechargeModal(false)}
+          onSuccess={fetchSummary}
+        />
+      )}
     </main>
   );
 }

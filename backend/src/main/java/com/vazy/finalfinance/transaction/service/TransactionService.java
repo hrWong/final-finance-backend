@@ -12,6 +12,7 @@ import com.vazy.finalfinance.transaction.vo.TransactionResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.vazy.finalfinance.wallet.service.WalletService;
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -28,6 +29,7 @@ public class TransactionService {
     private final AssetMapper assetMapper;
     private final PortfolioPositionMapper positionMapper;
     private final PositionRebuildService positionRebuildService;
+    private final WalletService walletService;
 
     public List<TransactionResponse> findAll(String symbol, String type) {
         List<Transaction> transactions = transactionMapper.findAll(DEFAULT_PORTFOLIO_ID, symbol, type);
@@ -63,13 +65,16 @@ public class TransactionService {
             }
         }
 
-        // 3. 计算金额（卖出时 netAmount = grossAmount - commission - tax）
         BigDecimal grossAmount = request.quantity().multiply(request.price());
         BigDecimal netAmount = "SELL".equalsIgnoreCase(request.type())
                 ? grossAmount.subtract(request.commission()).subtract(request.tax())
                 : grossAmount.add(request.commission()).add(request.tax());
 
-        // 3. 构建 entity 并插入数据库
+        // 3. 钱包结算：买入扣减，卖出增加
+        BigDecimal walletDelta = "SELL".equalsIgnoreCase(request.type()) ? netAmount : netAmount.negate();
+        walletService.updateBalance("default_user", walletDelta);
+
+        // 4. 构建 entity 并插入数据库
         Transaction tx = new Transaction();
         tx.setPortfolioId(DEFAULT_PORTFOLIO_ID);
         tx.setAssetId(asset.getId());
@@ -101,7 +106,14 @@ public class TransactionService {
         }
 
         BigDecimal grossAmount = request.quantity().multiply(request.price());
-        BigDecimal netAmount = grossAmount.add(request.commission()).add(request.tax());
+        BigDecimal newNetAmount = "SELL".equalsIgnoreCase(request.type())
+                ? grossAmount.subtract(request.commission()).subtract(request.tax())
+                : grossAmount.add(request.commission()).add(request.tax());
+
+        // 处理钱包回退和重新扣费
+        BigDecimal reverseOldDelta = "SELL".equalsIgnoreCase(oldTx.getType()) ? oldTx.getNetAmount().negate() : oldTx.getNetAmount();
+        BigDecimal newWalletDelta = "SELL".equalsIgnoreCase(request.type()) ? newNetAmount : newNetAmount.negate();
+        walletService.updateBalance("default_user", reverseOldDelta.add(newWalletDelta));
 
         oldTx.setType(request.type());
         oldTx.setTradeDate(request.tradeDate());
@@ -110,7 +122,7 @@ public class TransactionService {
         oldTx.setGrossAmount(grossAmount);
         oldTx.setCommission(request.commission());
         oldTx.setTax(request.tax());
-        oldTx.setNetAmount(netAmount);
+        oldTx.setNetAmount(newNetAmount);
         oldTx.setCurrency(request.currency());
         oldTx.setNote(request.note());
 
@@ -129,6 +141,10 @@ public class TransactionService {
         if (tx == null) {
             throw new IllegalArgumentException("Transaction not found: " + id);
         }
+
+        // 逆向钱包资金影响
+        BigDecimal reverseOldDelta = "SELL".equalsIgnoreCase(tx.getType()) ? tx.getNetAmount().negate() : tx.getNetAmount();
+        walletService.updateBalance("default_user", reverseOldDelta);
 
         transactionMapper.deleteById(id);
 
