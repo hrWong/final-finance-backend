@@ -18,6 +18,8 @@
 --
 -- Table structure for table `assets`
 --
+create database   final_finance;
+use final_finance;
 
 DROP TABLE IF EXISTS `assets`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
