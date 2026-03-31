@@ -25,12 +25,15 @@ export function formatMoney(
     return "--";
   }
 
+  const maxFrac = options.maximumFractionDigits ?? 2;
+  const minFrac = Math.min(options.minimumFractionDigits ?? 2, maxFrac);
+
   return new Intl.NumberFormat("zh-CN", {
     style: "currency",
     currency,
     notation: options.compact ? "compact" : "standard",
-    minimumFractionDigits: options.minimumFractionDigits ?? 2,
-    maximumFractionDigits: options.maximumFractionDigits ?? 2,
+    minimumFractionDigits: minFrac,
+    maximumFractionDigits: maxFrac,
     signDisplay: options.signed ? "always" : "auto",
   }).format(numericValue);
 }
