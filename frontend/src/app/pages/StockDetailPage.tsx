@@ -7,6 +7,8 @@ import { StockSidebar } from "../components/StockSidebar";
 import { MyPositions } from "../components/MyPositions";
 import { TransactionsTable } from "../components/TransactionsTable";
 import { AboutCompany } from "../components/AboutCompany";
+import { BuyModal } from "../components/BuyModal";
+import { SellModal } from "../components/SellModal";
 import { getAsset, getPortfolio, getStockOverview, getStockPosition, getStockTransactions } from "../lib/api";
 import { formatMoney, formatPercent } from "../lib/formatters";
 import { getInstrumentIcon } from "../lib/instruments";
@@ -26,6 +28,8 @@ export function StockDetailPage() {
   const [position, setPosition] = useState<PositionResponse | null>(null);
   const [transactions, setTransactions] = useState<TransactionResponse[] | null>(null);
   const [portfolio, setPortfolio] = useState<CurrentPortfolioResponse | null>(null);
+  const [showBuyModal, setShowBuyModal] = useState(false);
+  const [showSellModal, setShowSellModal] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -165,26 +169,46 @@ export function StockDetailPage() {
         </div>
 
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <StockChart
-              symbol={normalizedSymbol}
-              currency={displayCurrency}
-              costPerShare={position?.avgCost ?? null}
-            />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+          <div className="lg:col-span-2 relative h-[600px] lg:h-auto">
+            <div className="lg:absolute lg:inset-0 flex flex-col w-full h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-[#f8f9fa]">
+              <StockChart
+                symbol={normalizedSymbol}
+                currency={displayCurrency}
+                costPerShare={position?.avgCost ?? null}
+              />
 
-            <MyPositions
-              position={position}
-              portfolio={portfolio}
-              currency={displayCurrency}
-            />
+              <MyPositions
+                position={position}
+                portfolio={portfolio}
+                currency={displayCurrency}
+              />
 
-            <TransactionsTable
-              transactions={transactions}
-              currency={displayCurrency}
-            />
+              <TransactionsTable
+                transactions={transactions}
+                currency={displayCurrency}
+              />
 
-            <AboutCompany asset={asset} />
+              <AboutCompany asset={asset} />
+            </div>
+
+            <div className="border-t border-gray-200 bg-white p-4 flex items-center justify-end gap-3 shrink-0">
+              <button
+                onClick={() => setShowBuyModal(true)}
+                className="px-8 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors"
+              >
+                买入
+              </button>
+              <button
+                onClick={() => setShowSellModal(true)}
+                disabled={!position || (position.quantity ?? 0) <= 0}
+                className="px-8 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                卖出
+              </button>
+            </div>
+            </div>
           </div>
 
           <div className="lg:col-span-1">
@@ -192,6 +216,32 @@ export function StockDetailPage() {
           </div>
         </div>
       </main>
+      {showBuyModal && (
+        <BuyModal
+          stock={{
+            name: displayName,
+            ticker: normalizedSymbol,
+            icon: getInstrumentIcon(normalizedSymbol, asset?.assetType) || "📈",
+            currentPrice: overview?.lastPrice?.toString() || "0",
+            currency: displayCurrency,
+          }}
+          onClose={() => setShowBuyModal(false)}
+        />
+      )}
+
+      {showSellModal && (
+        <SellModal
+          stock={{
+            name: displayName,
+            ticker: normalizedSymbol,
+            icon: getInstrumentIcon(normalizedSymbol, asset?.assetType) || "📈",
+            currentPrice: overview?.lastPrice?.toString() || "0",
+            currency: displayCurrency,
+          }}
+          maxShares={position?.quantity ?? 0}
+          onClose={() => setShowSellModal(false)}
+        />
+      )}
     </div>
   );
 }

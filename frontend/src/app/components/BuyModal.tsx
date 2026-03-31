@@ -77,8 +77,9 @@ export function BuyModal({ stock, onClose }: BuyModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+      <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-y-auto w-full">
+          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center">
               <span className="text-xl">{stock.icon}</span>
@@ -140,9 +141,8 @@ export function BuyModal({ stock, onClose }: BuyModalProps) {
               <input
                 type="number"
                 value={formData.price}
-                onChange={(event) => handleInputChange("price", event.target.value)}
-                placeholder="0.00"
-                className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                readOnly
+                className="w-full pl-8 pr-4 py-2.5 border border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed rounded-lg text-sm focus:outline-none"
                 min="0"
                 step="0.01"
                 required
@@ -265,6 +265,7 @@ export function BuyModal({ stock, onClose }: BuyModalProps) {
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );
