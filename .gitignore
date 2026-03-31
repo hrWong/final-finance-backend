@@ -32,4 +32,7 @@ backups/*
 # Frontend
 frontend/node_modules/
 frontend/dist/
+frontend/vite.config.ts
 
+# backend 
+backend/src/main/resources/application.yml
