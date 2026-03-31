@@ -23,9 +23,9 @@ public class StockService {
         var quote = marketDataService.getQuote(symbol);
         return new StockOverviewResponse(
                 symbol,
-                null,
-                null,
-                null,
+                quote.name(),
+                quote.exchange(),
+                quote.currency(),
                 quote.lastPrice(),
                 quote.changeAmount(),
                 quote.changePercent(),
@@ -38,7 +38,10 @@ public class StockService {
     }
 
     public List<StockHistoryPointResponse> getHistory(String symbol, String range, String interval) {
-        return List.of();
+        return marketDataService.getHistory(symbol, range, interval)
+                .stream()
+                .map(point -> new StockHistoryPointResponse(point.date(), point.close()))
+                .toList();
     }
 
     public Object getPosition(String symbol) {

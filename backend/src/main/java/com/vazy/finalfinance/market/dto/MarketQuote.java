@@ -4,6 +4,9 @@ import java.math.BigDecimal;
 
 public record MarketQuote(
         String symbol,
+        String name,
+        String exchange,
+        String currency,
         BigDecimal lastPrice,
         BigDecimal changeAmount,
         BigDecimal changePercent,
