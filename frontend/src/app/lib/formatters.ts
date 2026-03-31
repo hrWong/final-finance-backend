@@ -50,7 +50,7 @@ export function formatPercent(
 
   const digits = options.digits ?? 2;
   const prefix = options.signed && numericValue > 0 ? "+" : "";
-  return `${prefix}${numericValue.toFixed(digits)}%`;
+  return `${prefix}${(numericValue * 100).toFixed(digits)}%`;
 }
 
 export function formatNumber(

@@ -19,7 +19,12 @@ export interface DashboardSummaryResponse {
 export interface AllocationItemResponse {
   label: string;
   value: number | null;
+  invested: number | null;
+  gain: number | null;
+  gainPct: number | null;
+  itemCount: number | null;
   weight: number | null;
+  positions: PositionResponse[] | null;
 }
 
 export interface MarketMoverResponse {
