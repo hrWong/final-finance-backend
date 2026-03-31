@@ -1,6 +1,7 @@
 package com.vazy.finalfinance.market.service;
 
-import com.vazy.finalfinance.market.client.YahooFinanceClient;
+import com.vazy.finalfinance.market.client.ItickFinanceClient;
+import com.vazy.finalfinance.market.dto.MarketHistoryPoint;
 import com.vazy.finalfinance.market.dto.MarketQuote;
 import com.vazy.finalfinance.market.vo.MarketMoverResponse;
 import lombok.RequiredArgsConstructor;
@@ -13,16 +14,16 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MarketDataService {
 
-    private final YahooFinanceClient yahooFinanceClient;
+    private final ItickFinanceClient itickFinanceClient;
 
     @Cacheable(cacheNames = "quotes", key = "#symbol")
     public MarketQuote getQuote(String symbol) {
-        return yahooFinanceClient.getQuote(symbol);
+        return itickFinanceClient.getQuote(symbol);
     }
 
     @Cacheable(cacheNames = "histories", key = "#symbol + ':' + #range + ':' + #interval")
-    public List<?> getHistory(String symbol, String range, String interval) {
-        return yahooFinanceClient.getHistory(symbol, range, interval);
+    public List<MarketHistoryPoint> getHistory(String symbol, String range, String interval) {
+        return itickFinanceClient.getHistory(symbol, range, interval);
     }
 
     public List<MarketMoverResponse> getMovers(int limit) {
