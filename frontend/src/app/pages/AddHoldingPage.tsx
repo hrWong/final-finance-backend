@@ -127,7 +127,6 @@ export function AddHoldingPage() {
       <main className="max-w-[1400px] mx-auto px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-semibold text-gray-900 mb-2">添加持仓</h1>
-          <p className="text-gray-600">搜索后端资产库并直接提交买入交易</p>
         </div>
 
         <div className="flex items-center gap-2 mb-6">
@@ -211,11 +210,16 @@ export function AddHoldingPage() {
                           imageClassName="w-6 h-6 rounded"
                           fallbackClassName="text-lg"
                         />
-                        <div>
-                          <div className="text-sm font-medium text-gray-900 hover:text-blue-500">
+                        <div className="min-w-0 flex-1">
+                          <div
+                            className="text-sm font-medium text-gray-900 hover:text-blue-500 truncate max-w-[150px] lg:max-w-[250px]"
+                            title={item.name}
+                          >
                             {item.name}
                           </div>
-                          <div className="text-xs text-gray-500">{item.ticker}</div>
+                          <div className="text-xs text-gray-500 truncate max-w-[150px] lg:max-w-[250px]">
+                            {item.ticker}
+                          </div>
                         </div>
                       </div>
                     </td>
