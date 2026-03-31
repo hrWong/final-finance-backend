@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
+import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { Calendar, MoreHorizontal } from "lucide-react";
 import { getStockHistory } from "../lib/api";
 import { formatDate, formatMoney, formatPercent, toNumber } from "../lib/formatters";
-import type { StockHistoryPointResponse } from "../lib/types";
+import type { StockHistoryPointResponse, TransactionResponse } from "../lib/types";
 import { EmptyState } from "./EmptyState";
 
 const timeRanges = [
@@ -21,9 +21,10 @@ interface StockChartProps {
   symbol?: string;
   currency?: string | null;
   costPerShare?: number | null;
+  transactions?: TransactionResponse[] | null;
 }
 
-export function StockChart({ symbol = "AAPL", currency = "USD", costPerShare }: StockChartProps) {
+export function StockChart({ symbol = "AAPL", currency = "USD", costPerShare, transactions }: StockChartProps) {
   const [selectedRange, setSelectedRange] = useState("1y");
   const [history, setHistory] = useState<StockHistoryPointResponse[] | null>(null);
 
@@ -88,10 +89,50 @@ export function StockChart({ symbol = "AAPL", currency = "USD", costPerShare }: 
     );
   }
 
-  const displayData = history.map((point) => ({
+  const formattedTxs = (transactions || []).map(t => ({
+     ...t,
+     formattedDate: formatDate(t.tradeDate),
+     rawTimestamp: new Date(t.tradeDate).getTime()
+  }));
+
+  const baseHistory = history.map((point) => ({
+    rawDate: new Date(point.date).getTime(),
     date: formatDate(point.date),
     value: toNumber(point.close) ?? 0,
   }));
+
+  // 将不在 history 中的交易日期强制插入到走势图中
+  formattedTxs.forEach(t => {
+    if (!baseHistory.some(h => h.date === t.formattedDate)) {
+      baseHistory.push({
+        rawDate: t.rawTimestamp,
+        date: t.formattedDate,
+        value: 0, // 之后会用临近的值向前填充
+      });
+    }
+  });
+
+  baseHistory.sort((a, b) => a.rawDate - b.rawDate);
+
+  let lastVal = baseHistory[0]?.value || 0;
+  const displayData = baseHistory.map((point) => {
+    if (point.value && point.value > 0) {
+      lastVal = point.value;
+    } else {
+      point.value = lastVal;
+    }
+
+    const dayTxs = formattedTxs.filter(t => t.formattedDate === point.date);
+    const buys = dayTxs.filter(t => t.type === 'BUY');
+    const sells = dayTxs.filter(t => t.type === 'SELL');
+    return {
+      date: point.date,
+      value: point.value,
+      buyPrice: buys.length > 0 ? buys[0].price : null,
+      sellPrice: sells.length > 0 ? sells[0].price : null,
+      transactions: dayTxs.length > 0 ? dayTxs : null,
+    };
+  });
   const firstValue = displayData[0]?.value ?? 0;
   const lastValue = displayData[displayData.length - 1]?.value ?? 0;
   const changeAmount = lastValue - firstValue;
@@ -153,7 +194,7 @@ export function StockChart({ symbol = "AAPL", currency = "USD", costPerShare }: 
 
       <div className="relative">
         <ResponsiveContainer width="100%" height={400}>
-          <AreaChart
+          <ComposedChart
             data={displayData}
             margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
           >
@@ -178,14 +219,27 @@ export function StockChart({ symbol = "AAPL", currency = "USD", costPerShare }: 
               dx={-10}
             />
             <Tooltip
-              contentStyle={{
-                backgroundColor: "#1F2937",
-                border: "none",
-                borderRadius: "8px",
-                color: "white",
-                padding: "8px 12px",
+              content={({ active, payload, label }) => {
+                if (active && payload && payload.length) {
+                  const dataPoint = payload[0].payload;
+                  return (
+                    <div className="bg-[#1F2937] text-white p-3 rounded-lg shadow-lg text-sm border-none z-50 relative">
+                      <p className="font-semibold mb-2">{label}</p>
+                      <p className="text-gray-300 font-medium pb-2 border-b border-gray-600 mb-2">
+                        收盘价: <span className="text-white">{formatMoney(dataPoint.value, currency)}</span>
+                      </p>
+                      {dataPoint.transactions && dataPoint.transactions.map((tx: any, idx: number) => (
+                        <div key={idx} className={`mt-2 ${tx.type === 'BUY' ? 'text-red-400' : 'text-emerald-400'}`}>
+                          <p className="font-medium">{tx.type === 'BUY' ? '🔴 买入' : '🟢 卖出'}</p>
+                          <p>成交价: {formatMoney(tx.price, currency)}</p>
+                          <p>数量: {tx.quantity} 股</p>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }
+                return null;
               }}
-              formatter={(value: number) => [formatMoney(value, currency), "Price"]}
             />
             {costPerShare ? (
               <ReferenceLine
@@ -207,7 +261,23 @@ export function StockChart({ symbol = "AAPL", currency = "USD", costPerShare }: 
               strokeWidth={2}
               fill="url(#colorValue)"
             />
-          </AreaChart>
+            <Line
+              type="monotone"
+              dataKey="buyPrice"
+              stroke="none"
+              isAnimationActive={false}
+              dot={{ r: 5, fill: '#ef4444', strokeWidth: 2, stroke: '#fff' }}
+              activeDot={{ r: 7, fill: '#ef4444', strokeWidth: 2, stroke: '#fff' }}
+            />
+            <Line
+              type="monotone"
+              dataKey="sellPrice"
+              stroke="none"
+              isAnimationActive={false}
+              dot={{ r: 5, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }}
+              activeDot={{ r: 7, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }}
+            />
+          </ComposedChart>
         </ResponsiveContainer>
 
         <div className="absolute top-12 right-8 text-xs text-gray-500">

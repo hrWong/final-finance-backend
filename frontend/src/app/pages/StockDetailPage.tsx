@@ -171,6 +171,7 @@ export function StockDetailPage() {
                 symbol={normalizedSymbol}
                 currency={displayCurrency}
                 costPerShare={position?.avgCost ?? null}
+                transactions={transactions}
               />
 
               <MyPositions
