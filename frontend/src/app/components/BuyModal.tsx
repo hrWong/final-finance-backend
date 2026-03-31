@@ -11,6 +11,7 @@ interface BuyModalProps {
     currency?: string;
   };
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
 function getCurrencySymbol(currency?: string) {
@@ -24,7 +25,7 @@ function extractNumericValue(value: string) {
   return value.replace(/[^\d.]/g, "");
 }
 
-export function BuyModal({ stock, onClose }: BuyModalProps) {
+export function BuyModal({ stock, onClose, onSuccess }: BuyModalProps) {
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split("T")[0],
     shares: "",
@@ -67,6 +68,7 @@ export function BuyModal({ stock, onClose }: BuyModalProps) {
         currency,
         note: formData.note || undefined,
       });
+      onSuccess?.();
       onClose();
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "提交交易失败");

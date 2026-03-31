@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router";
+import { useEffect, useState, useCallback } from "react";
+import { useParams } from "react-router";
 import { Star, Plus, Share2, ChevronDown } from "lucide-react";
 import { StockChart } from "../components/StockChart";
 import { InstrumentIcon } from "../components/InstrumentIcon";
@@ -31,35 +31,25 @@ export function StockDetailPage() {
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [showSellModal, setShowSellModal] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadStockPage = useCallback(async () => {
+    const [overviewData, assetData, positionData, transactionData, portfolioData] = await Promise.all([
+      getStockOverview(normalizedSymbol),
+      getAsset(normalizedSymbol),
+      getStockPosition(normalizedSymbol),
+      getStockTransactions(normalizedSymbol),
+      getPortfolio(),
+    ]);
 
-    async function loadStockPage() {
-      const [overviewData, assetData, positionData, transactionData, portfolioData] = await Promise.all([
-        getStockOverview(normalizedSymbol),
-        getAsset(normalizedSymbol),
-        getStockPosition(normalizedSymbol),
-        getStockTransactions(normalizedSymbol),
-        getPortfolio(),
-      ]);
-
-      if (cancelled) {
-        return;
-      }
-
-      setOverview(overviewData);
-      setAsset(assetData);
-      setPosition(positionData);
-      setTransactions(transactionData);
-      setPortfolio(portfolioData);
-    }
-
-    loadStockPage();
-
-    return () => {
-      cancelled = true;
-    };
+    setOverview(overviewData);
+    setAsset(assetData);
+    setPosition(positionData);
+    setTransactions(transactionData);
+    setPortfolio(portfolioData);
   }, [normalizedSymbol]);
+
+  useEffect(() => {
+    loadStockPage();
+  }, [loadStockPage]);
 
   const displayCurrency = overview?.currency || asset?.currency || "USD";
   const displayName = overview?.name || asset?.nameZh || asset?.name || normalizedSymbol;
@@ -226,6 +216,7 @@ export function StockDetailPage() {
             currency: displayCurrency,
           }}
           onClose={() => setShowBuyModal(false)}
+          onSuccess={loadStockPage}
         />
       )}
 
@@ -240,6 +231,7 @@ export function StockDetailPage() {
           }}
           maxShares={position?.quantity ?? 0}
           onClose={() => setShowSellModal(false)}
+          onSuccess={loadStockPage}
         />
       )}
     </div>

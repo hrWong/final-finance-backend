@@ -12,6 +12,7 @@ interface SellModalProps {
   };
   maxShares: number;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
 function getCurrencySymbol(currency?: string) {
@@ -25,7 +26,7 @@ function extractNumericValue(value: string) {
   return value.replace(/[^\d.]/g, "");
 }
 
-export function SellModal({ stock, maxShares, onClose }: SellModalProps) {
+export function SellModal({ stock, maxShares, onClose, onSuccess }: SellModalProps) {
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split("T")[0],
     shares: "",
@@ -74,6 +75,7 @@ export function SellModal({ stock, maxShares, onClose }: SellModalProps) {
         currency,
         note: formData.note || undefined,
       });
+      onSuccess?.();
       onClose();
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "提交交易失败");
