@@ -28,3 +28,7 @@ backups/*
 
 # Build caches
 .m2repo/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
