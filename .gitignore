@@ -37,3 +37,5 @@ frontend/vite.config.ts
 
 # backend 
 backend/src/main/resources/application.yml
+frontend/vite.config.ts
+backend/src/main/resources/application.yml
