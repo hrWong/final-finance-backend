@@ -42,8 +42,10 @@ public class ItickFinanceClient {
     private static final Pattern HTML_TAG_PATTERN = Pattern.compile("<[^>]+>");
     private static final int DEFAULT_SEARCH_LIMIT = 12;
     private static final int DEFAULT_MOVER_UNIVERSE_SIZE = 40;
-    private static final int QUOTE_BATCH_SIZE = 2;
-    private static final long MOVER_REQUEST_DELAY_MILLIS = 150L;
+    private static final int SEARCH_QUOTE_BATCH_SIZE = 2;
+    private static final int MOVER_QUOTE_BATCH_SIZE = 2;
+    private static final long SEARCH_REQUEST_DELAY_MILLIS = 0L;
+    private static final long MOVER_REQUEST_DELAY_MILLIS = 250L;
 
     private final WebClient itickWebClient;
     private final Map<String, List<CatalogEntry>> catalogCache = new ConcurrentHashMap<>();
@@ -125,18 +127,29 @@ public class ItickFinanceClient {
         List<CatalogEntry> catalog = loadCatalog(normalizedType, DEFAULT_REGION);
         String normalizedKeyword = normalizeKeyword(keyword);
 
-        return catalog.stream()
+        List<CatalogEntry> matchedEntries = catalog.stream()
                 .filter(entry -> !"stock".equals(normalizedType) || normalizedKeyword.isBlank() ? looksLikeCommonStock(entry) : true)
                 .filter(entry -> matchesKeyword(entry, normalizedKeyword))
                 .limit(limit > 0 ? limit : DEFAULT_SEARCH_LIMIT)
-                .map(entry -> new AssetSearchItemResponse(
-                        entry.symbol(),
-                        entry.exchange(),
-                        entry.name(),
-                        null,
-                        entry.assetType().toUpperCase(Locale.ROOT),
-                        null
-                ))
+                .toList();
+
+        if (matchedEntries.isEmpty()) {
+            return List.of();
+        }
+
+        Map<String, BatchQuote> quotesBySymbol;
+        if ("stock".equals(normalizedType)) {
+            quotesBySymbol = fetchBatchQuotes(DEFAULT_REGION, matchedEntries.stream()
+                    .map(CatalogEntry::symbol)
+                    .toList(), SEARCH_QUOTE_BATCH_SIZE, SEARCH_REQUEST_DELAY_MILLIS, "search").stream()
+                    .collect(Collectors.toMap(BatchQuote::symbol, Function.identity(), (left, right) -> left));
+        } else {
+            quotesBySymbol = Map.of();
+        }
+
+        String currency = resolveCurrency(DEFAULT_REGION);
+        return matchedEntries.stream()
+                .map(entry -> toAssetSearchItem(entry, quotesBySymbol.get(entry.symbol()), currency))
                 .toList();
     }
 
@@ -204,7 +217,13 @@ public class ItickFinanceClient {
         Map<String, CatalogEntry> entriesBySymbol = moverUniverse.stream()
                 .collect(Collectors.toMap(CatalogEntry::symbol, Function.identity(), (left, right) -> left, LinkedHashMap::new));
 
-        List<BatchQuote> quotes = fetchBatchQuotes(DEFAULT_REGION, new ArrayList<>(entriesBySymbol.keySet()));
+        List<BatchQuote> quotes = fetchBatchQuotes(
+                DEFAULT_REGION,
+                new ArrayList<>(entriesBySymbol.keySet()),
+                MOVER_QUOTE_BATCH_SIZE,
+                MOVER_REQUEST_DELAY_MILLIS,
+                "movers"
+        );
 
         List<MarketMoverResponse> gainers = quotes.stream()
                 .filter(quote -> quote.changePercent() != null && quote.changePercent().compareTo(BigDecimal.ZERO) > 0)
@@ -441,10 +460,17 @@ public class ItickFinanceClient {
                 && !normalizedName.contains("yield");
     }
 
-    private List<BatchQuote> fetchBatchQuotes(String region, List<String> symbols) {
+    private List<BatchQuote> fetchBatchQuotes(
+            String region,
+            List<String> symbols,
+            int batchSize,
+            long delayMillis,
+            String requestContext
+    ) {
         List<List<String>> chunks = new ArrayList<>();
-        for (int index = 0; index < symbols.size(); index += QUOTE_BATCH_SIZE) {
-            chunks.add(symbols.subList(index, Math.min(index + QUOTE_BATCH_SIZE, symbols.size())));
+        int normalizedBatchSize = Math.max(batchSize, 1);
+        for (int index = 0; index < symbols.size(); index += normalizedBatchSize) {
+            chunks.add(symbols.subList(index, Math.min(index + normalizedBatchSize, symbols.size())));
         }
 
         List<BatchQuote> quotes = new ArrayList<>();
@@ -452,9 +478,9 @@ public class ItickFinanceClient {
             try {
                 quotes.addAll(fetchQuoteChunk(region, chunk));
             } catch (BusinessException exception) {
-                log.warn("Skipping iTick mover quote chunk {} after provider error: {}", chunk, exception.getMessage());
+                log.warn("Skipping iTick {} quote chunk {} after provider error: {}", requestContext, chunk, exception.getMessage());
             }
-            sleepQuietly(MOVER_REQUEST_DELAY_MILLIS);
+            sleepQuietly(delayMillis);
         }
         return quotes.stream().filter(Objects::nonNull).toList();
     }
@@ -490,6 +516,25 @@ public class ItickFinanceClient {
                 quote.changeAmount(),
                 quote.changePercent(),
                 positive
+        );
+    }
+
+    private AssetSearchItemResponse toAssetSearchItem(CatalogEntry entry, BatchQuote quote, String currency) {
+        return new AssetSearchItemResponse(
+                entry.symbol(),
+                entry.exchange(),
+                entry.name(),
+                null,
+                entry.assetType().toUpperCase(Locale.ROOT),
+                currency,
+                entry.sector(),
+                null,
+                quote == null ? null : quote.lastPrice(),
+                quote == null ? null : quote.changeAmount(),
+                quote == null ? null : quote.changePercent(),
+                null,
+                null,
+                null
         );
     }
 
@@ -546,6 +591,22 @@ public class ItickFinanceClient {
             case "AU" -> ZoneId.of("Australia/Sydney");
             case "CA" -> ZoneId.of("America/Toronto");
             default -> ZoneId.of("UTC");
+        };
+    }
+
+    private String resolveCurrency(String region) {
+        return switch (region) {
+            case "US" -> "USD";
+            case "HK" -> "HKD";
+            case "SH", "SZ" -> "CNY";
+            case "SG" -> "SGD";
+            case "JP" -> "JPY";
+            case "TW" -> "TWD";
+            case "GB" -> "GBP";
+            case "DE", "FR", "IT", "NL" -> "EUR";
+            case "AU" -> "AUD";
+            case "CA" -> "CAD";
+            default -> null;
         };
     }
 
