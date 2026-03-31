@@ -4,6 +4,8 @@ server:
 spring:
   application:
     name: final-finance-backend
+  config:
+    import: optional:classpath:application-local.yml
   datasource:
     url: jdbc:mysql://localhost:3306/final_finance?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8
     username: root
@@ -28,8 +30,14 @@ mybatis:
     default-statement-timeout: 30
 
 market:
-  yahoo:
-    base-url: https://query1.finance.yahoo.com
+  itick:
+    base-url: https://api-free.itick.org/stock
+    token:
+    # Optional explicit proxy. If omitted, the client will try HTTPS_PROXY/http_proxy/ALL_PROXY env vars.
+    proxy-uri:
+    connect-timeout-millis: 5000
+    response-timeout-seconds: 10
+    user-agent: Mozilla/5.0
     quote-cache-ttl-seconds: 60
     history-cache-ttl-seconds: 600
     fundamentals-cache-ttl-seconds: 1800
