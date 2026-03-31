@@ -113,6 +113,14 @@ export interface AssetSearchItemResponse {
   nameZh: string | null;
   assetType: string | null;
   currency: string | null;
+  sector: string | null;
+  iconUrl: string | null;
+  lastPrice: number | null;
+  changeAmount: number | null;
+  changePercent: number | null;
+  marketCap: number | null;
+  pe: number | null;
+  dividendYield: number | null;
 }
 
 export interface CreateTransactionRequest {

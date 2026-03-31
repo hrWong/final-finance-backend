@@ -3,10 +3,10 @@ import { Link, useNavigate } from "react-router";
 import { Search, Bell, Settings, TrendingUp, TrendingDown } from "lucide-react";
 import { BuyModal } from "../components/BuyModal";
 import { InstrumentIcon } from "../components/InstrumentIcon";
-import { searchAssets, getStockOverview } from "../lib/api";
+import { searchAssets } from "../lib/api";
 import { formatMoney, formatPercent } from "../lib/formatters";
 import { getInstrumentIcon } from "../lib/instruments";
-import type { AssetSearchItemResponse, StockOverviewResponse } from "../lib/types";
+import type { AssetSearchItemResponse } from "../lib/types";
 import { EmptyState } from "../components/EmptyState";
 
 interface SearchRow {
@@ -32,25 +32,22 @@ const typeMap = {
   bonds: "BOND",
 } as const;
 
-function buildSearchRow(
-  asset: AssetSearchItemResponse,
-  overview: StockOverviewResponse | null,
-): SearchRow {
-  const currency = overview?.currency || asset.currency || "USD";
+function buildSearchRow(asset: AssetSearchItemResponse): SearchRow {
+  const currency = asset.currency || "USD";
   return {
     id: asset.symbol,
     name: asset.nameZh || asset.name || asset.symbol,
     ticker: asset.symbol,
     icon: getInstrumentIcon(asset.symbol, asset.assetType),
-    iconUrl: overview?.iconUrl,
-    currentPrice: formatMoney(overview?.lastPrice, currency),
-    change: formatMoney(overview?.changeAmount, currency, { signed: true }),
-    changePercent: formatPercent(overview?.changePercent, { digits: 2, signed: true }),
-    isPositive: Number(overview?.changeAmount ?? 0) >= 0,
-    sector: asset.assetType || "--",
-    marketCap: formatMoney(overview?.marketCap, currency, { compact: true, maximumFractionDigits: 1 }),
-    pe: overview?.pe !== null && overview?.pe !== undefined ? String(overview.pe) : "--",
-    dividendYield: formatPercent(overview?.dividendYield, { digits: 2 }),
+    iconUrl: asset.iconUrl,
+    currentPrice: formatMoney(asset.lastPrice, currency),
+    change: formatMoney(asset.changeAmount, currency, { signed: true }),
+    changePercent: formatPercent(asset.changePercent, { digits: 2, signed: true }),
+    isPositive: Number(asset.changeAmount ?? 0) >= 0,
+    sector: asset.sector || asset.assetType || "--",
+    marketCap: formatMoney(asset.marketCap, currency, { compact: true, maximumFractionDigits: 1 }),
+    pe: asset.pe !== null && asset.pe !== undefined ? String(asset.pe) : "--",
+    dividendYield: formatPercent(asset.dividendYield, { digits: 2 }),
     currency,
   };
 }
@@ -82,24 +79,11 @@ export function AddHoldingPage() {
         return;
       }
 
-      const enriched: SearchRow[] = [];
-      for (const asset of assets.slice(0, 12)) {
-        const overview = await getStockOverview(asset.symbol);
-        enriched.push(buildSearchRow(asset, overview));
-
-        if (cancelled) {
-          return;
-        }
-
-        // Pace iTick-dependent overview requests to avoid 429 bursts on page load.
-        await new Promise((resolve) => setTimeout(resolve, 250));
-      }
-
       if (cancelled) {
         return;
       }
 
-      setResults(enriched);
+      setResults(assets.slice(0, 12).map(buildSearchRow));
       setLoading(false);
     }
 
