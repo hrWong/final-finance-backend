@@ -66,12 +66,6 @@ export function AddHoldingPage() {
     let cancelled = false;
 
     async function loadSearchResults() {
-      if (!searchQuery.trim()) {
-        setResults([]);
-        setLoading(false);
-        return;
-      }
-
       setLoading(true);
       const assets = await searchAssets(searchQuery, typeMap[activeTab]);
 
@@ -162,7 +156,7 @@ export function AddHoldingPage() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="搜索股票代码或公司名称..."
+              placeholder="搜索股票代码或公司名称，或直接浏览默认列表..."
               value={searchQuery}
               onChange={(event) => {
                 setSearchTouched(true);
@@ -258,10 +252,10 @@ export function AddHoldingPage() {
           ) : (
             <div className="p-8">
               <EmptyState
-                title={searchTouched ? "没有搜索到可用资产" : "输入关键字开始搜索"}
+                title={searchTouched ? "没有搜索到可用资产" : "暂无可展示资产"}
                 description={searchTouched
-                  ? "如果后端搜索接口未完成或没有数据，这里会保持为空。"
-                  : "该页面不再使用前端 mock 列表，只展示后端搜索结果。"}
+                  ? "后端已经接到真实资产搜索；如果这里为空，通常是当前关键字没有匹配到结果。"
+                  : "页面现在会优先展示后端返回的默认资产列表；如果为空，说明当前数据源没有返回可用标的。"}
               />
             </div>
           )}

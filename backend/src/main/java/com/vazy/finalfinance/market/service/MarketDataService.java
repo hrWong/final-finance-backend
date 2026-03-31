@@ -26,8 +26,8 @@ public class MarketDataService {
         return itickFinanceClient.getHistory(symbol, range, interval);
     }
 
+    @Cacheable(cacheNames = "movers", key = "#limit")
     public List<MarketMoverResponse> getMovers(int limit) {
-        // TODO: Replace this stub with a real market movers source or a curated watchlist calculation.
-        return List.of();
+        return itickFinanceClient.getMovers(limit);
     }
 }

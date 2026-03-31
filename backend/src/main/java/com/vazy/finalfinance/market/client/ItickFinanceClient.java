@@ -1,10 +1,13 @@
 package com.vazy.finalfinance.market.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.vazy.finalfinance.asset.vo.AssetResponse;
+import com.vazy.finalfinance.asset.vo.AssetSearchItemResponse;
 import com.vazy.finalfinance.common.exception.BusinessException;
 import com.vazy.finalfinance.common.exception.ErrorCode;
 import com.vazy.finalfinance.market.dto.MarketHistoryPoint;
 import com.vazy.finalfinance.market.dto.MarketQuote;
+import com.vazy.finalfinance.market.vo.MarketMoverResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -15,20 +18,38 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class ItickFinanceClient {
 
+    private static final String DEFAULT_REGION = "US";
+    private static final Pattern HTML_TAG_PATTERN = Pattern.compile("<[^>]+>");
+    private static final int DEFAULT_SEARCH_LIMIT = 12;
+    private static final int DEFAULT_MOVER_UNIVERSE_SIZE = 40;
+    private static final int QUOTE_BATCH_SIZE = 2;
+    private static final long MOVER_REQUEST_DELAY_MILLIS = 150L;
+
     private final WebClient itickWebClient;
+    private final Map<String, List<CatalogEntry>> catalogCache = new ConcurrentHashMap<>();
 
     public MarketQuote getQuote(String symbol) {
         ResolvedSymbol resolvedSymbol = resolveSymbol(symbol);
-        JsonNode quoteData = requestData("/quote", resolvedSymbol, uriBuilder -> uriBuilder
+        JsonNode quoteData = requestData(resolvedSymbol.displaySymbol(), uriBuilder -> uriBuilder
+                .path("/stock/quote")
                 .queryParam("region", resolvedSymbol.region())
                 .queryParam("code", resolvedSymbol.code())
                 .build());
@@ -43,7 +64,8 @@ public class ItickFinanceClient {
 
         JsonNode infoData = null;
         try {
-            infoData = requestData("/info", resolvedSymbol, uriBuilder -> uriBuilder
+            infoData = requestData(resolvedSymbol.displaySymbol(), uriBuilder -> uriBuilder
+                    .path("/stock/info")
                     .queryParam("type", "stock")
                     .queryParam("region", resolvedSymbol.region())
                     .queryParam("code", resolvedSymbol.code())
@@ -69,7 +91,8 @@ public class ItickFinanceClient {
 
     public List<MarketHistoryPoint> getHistory(String symbol, String range, String interval) {
         ResolvedSymbol resolvedSymbol = resolveSymbol(symbol);
-        JsonNode data = requestData("/kline", resolvedSymbol, uriBuilder -> uriBuilder
+        JsonNode data = requestData(resolvedSymbol.displaySymbol(), uriBuilder -> uriBuilder
+                .path("/stock/kline")
                 .queryParam("region", resolvedSymbol.region())
                 .queryParam("code", resolvedSymbol.code())
                 .queryParam("kType", resolveKType(interval))
@@ -88,14 +111,119 @@ public class ItickFinanceClient {
                 .toList();
     }
 
+    public List<AssetSearchItemResponse> searchAssets(String keyword, String assetType, int limit) {
+        String normalizedType = normalizeAssetType(assetType);
+        List<CatalogEntry> catalog = loadCatalog(normalizedType, DEFAULT_REGION);
+        String normalizedKeyword = normalizeKeyword(keyword);
+
+        return catalog.stream()
+                .filter(entry -> !"stock".equals(normalizedType) || normalizedKeyword.isBlank() ? looksLikeCommonStock(entry) : true)
+                .filter(entry -> matchesKeyword(entry, normalizedKeyword))
+                .limit(limit > 0 ? limit : DEFAULT_SEARCH_LIMIT)
+                .map(entry -> new AssetSearchItemResponse(
+                        entry.symbol(),
+                        entry.exchange(),
+                        entry.name(),
+                        null,
+                        entry.assetType().toUpperCase(Locale.ROOT),
+                        null
+                ))
+                .toList();
+    }
+
+    public AssetResponse getAsset(String symbol) {
+        String normalizedSymbol = normalizeSymbol(symbol);
+        CatalogEntry matchedEntry = findCatalogEntry(normalizedSymbol);
+        if (matchedEntry == null) {
+            throw new BusinessException(ErrorCode.ASSET_NOT_FOUND, "Asset not found for symbol: " + symbol);
+        }
+
+        if (!"stock".equals(matchedEntry.assetType())) {
+            return new AssetResponse(
+                    null,
+                    matchedEntry.symbol(),
+                    matchedEntry.exchange(),
+                    matchedEntry.name(),
+                    null,
+                    matchedEntry.assetType().toUpperCase(Locale.ROOT),
+                    null,
+                    null,
+                    matchedEntry.sector(),
+                    null,
+                    null,
+                    null,
+                    "ACTIVE"
+            );
+        }
+
+        ResolvedSymbol resolvedSymbol = resolveSymbol(normalizedSymbol);
+        JsonNode infoData = requestData(resolvedSymbol.displaySymbol(), uriBuilder -> uriBuilder
+                .path("/stock/info")
+                .queryParam("type", "stock")
+                .queryParam("region", resolvedSymbol.region())
+                .queryParam("code", resolvedSymbol.code())
+                .build());
+
+        return new AssetResponse(
+                null,
+                resolvedSymbol.displaySymbol(),
+                firstNonBlank(text(infoData, "e"), matchedEntry.exchange()),
+                firstNonBlank(text(infoData, "n"), matchedEntry.name()),
+                null,
+                "STOCK",
+                firstNonBlank(text(infoData, "fcc"), text(infoData, "r")),
+                null,
+                firstNonBlank(text(infoData, "s"), matchedEntry.sector()),
+                text(infoData, "i"),
+                null,
+                null,
+                "ACTIVE"
+        );
+    }
+
+    public List<MarketMoverResponse> getMovers(int limit) {
+        int perSideLimit = Math.max(limit, 1);
+        List<CatalogEntry> moverUniverse = loadCatalog("stock", DEFAULT_REGION).stream()
+                .filter(this::looksLikeCommonStock)
+                .limit(Math.max(perSideLimit * 3, DEFAULT_MOVER_UNIVERSE_SIZE / 2))
+                .toList();
+
+        if (moverUniverse.isEmpty()) {
+            return List.of();
+        }
+
+        Map<String, CatalogEntry> entriesBySymbol = moverUniverse.stream()
+                .collect(Collectors.toMap(CatalogEntry::symbol, Function.identity(), (left, right) -> left, LinkedHashMap::new));
+
+        List<BatchQuote> quotes = fetchBatchQuotes(DEFAULT_REGION, new ArrayList<>(entriesBySymbol.keySet()));
+
+        List<MarketMoverResponse> gainers = quotes.stream()
+                .filter(quote -> quote.changePercent() != null && quote.changePercent().compareTo(BigDecimal.ZERO) > 0)
+                .sorted(Comparator.comparing(BatchQuote::changePercent).reversed())
+                .limit(perSideLimit)
+                .map(quote -> toMarketMover(quote, entriesBySymbol.get(quote.symbol()), true))
+                .toList();
+
+        List<MarketMoverResponse> losers = quotes.stream()
+                .filter(quote -> quote.changePercent() != null && quote.changePercent().compareTo(BigDecimal.ZERO) < 0)
+                .sorted(Comparator.comparing(BatchQuote::changePercent))
+                .limit(perSideLimit)
+                .map(quote -> toMarketMover(quote, entriesBySymbol.get(quote.symbol()), false))
+                .toList();
+
+        List<MarketMoverResponse> movers = new ArrayList<>(gainers.size() + losers.size());
+        movers.addAll(gainers);
+        movers.addAll(losers);
+        return movers;
+    }
+
     private JsonNode requestData(
-            String path,
-            ResolvedSymbol resolvedSymbol,
-            java.util.function.Function<org.springframework.web.util.UriBuilder, java.net.URI> uriBuilder
+            String requestLabel,
+            Function<org.springframework.web.util.UriBuilder, java.net.URI> uriBuilder
     ) {
         try {
             JsonNode root = itickWebClient.get()
-                    .uri(builder -> uriBuilder.apply(builder.path(path)))
+                    .uri(uriBuilder::apply)
                     .retrieve()
                     .bodyToMono(JsonNode.class)
                     .block();
@@ -103,7 +231,7 @@ public class ItickFinanceClient {
             if (root == null) {
                 throw new BusinessException(
                         ErrorCode.MARKET_DATA_UNAVAILABLE,
-                        "iTick returned an empty response for " + resolvedSymbol.displaySymbol()
+                        "iTick returned an empty response for " + requestLabel
                 );
             }
 
@@ -112,7 +240,7 @@ public class ItickFinanceClient {
                 String message = text(root, "msg");
                 throw new BusinessException(
                         ErrorCode.MARKET_DATA_UNAVAILABLE,
-                        "iTick returned code " + code + " for " + resolvedSymbol.displaySymbol() + ": " + message
+                        "iTick returned code " + code + " for " + requestLabel + ": " + message
                 );
             }
 
@@ -122,13 +250,13 @@ public class ItickFinanceClient {
         } catch (WebClientResponseException exception) {
             throw new BusinessException(
                     ErrorCode.MARKET_DATA_UNAVAILABLE,
-                    "iTick HTTP error for " + resolvedSymbol.displaySymbol() + ": "
+                    "iTick HTTP error for " + requestLabel + ": "
                             + exception.getStatusCode().value() + " " + exception.getStatusText()
             );
         } catch (RuntimeException exception) {
             throw new BusinessException(
                     ErrorCode.MARKET_DATA_UNAVAILABLE,
-                    "Failed to fetch iTick data for " + resolvedSymbol.displaySymbol() + ": " + exception.getMessage()
+                    "Failed to fetch iTick data for " + requestLabel + ": " + exception.getMessage()
             );
         }
     }
@@ -195,8 +323,158 @@ public class ItickFinanceClient {
         return range == null || range.isBlank() ? "1y" : range.trim().toLowerCase(Locale.ROOT);
     }
 
+    private List<CatalogEntry> loadCatalog(String assetType, String region) {
+        String cacheKey = assetType + ":" + region;
+        return catalogCache.computeIfAbsent(cacheKey, ignored -> fetchCatalog(assetType, region));
+    }
+
+    private List<CatalogEntry> fetchCatalog(String assetType, String region) {
+        JsonNode data = requestData("symbol list " + assetType + ":" + region, uriBuilder -> uriBuilder
+                .path("/symbol/list")
+                .queryParam("type", assetType)
+                .queryParam("region", region)
+                .queryParam("code", "")
+                .build());
+
+        if (!data.isArray()) {
+            return List.of();
+        }
+
+        return java.util.stream.StreamSupport.stream(data.spliterator(), false)
+                .map(node -> new CatalogEntry(
+                        normalizeSymbol(text(node, "c")),
+                        sanitizeText(text(node, "n")),
+                        sanitizeText(text(node, "e")),
+                        assetType,
+                        sanitizeText(text(node, "s")),
+                        sanitizeText(text(node, "l"))
+                ))
+                .filter(entry -> entry.symbol() != null && !entry.symbol().isBlank())
+                .toList();
+    }
+
+    private CatalogEntry findCatalogEntry(String symbol) {
+        for (String assetType : List.of("stock", "fund", "bond")) {
+            CatalogEntry exactMatch = loadCatalog(assetType, DEFAULT_REGION).stream()
+                    .filter(entry -> symbol.equals(entry.symbol()))
+                    .findFirst()
+                    .orElse(null);
+            if (exactMatch != null) {
+                return exactMatch;
+            }
+        }
+        return null;
+    }
+
+    private boolean matchesKeyword(CatalogEntry entry, String normalizedKeyword) {
+        if (normalizedKeyword.isBlank()) {
+            return true;
+        }
+
+        return containsIgnoreCase(entry.symbol(), normalizedKeyword)
+                || containsIgnoreCase(entry.name(), normalizedKeyword);
+    }
+
+    private String normalizeAssetType(String assetType) {
+        if (assetType == null || assetType.isBlank()) {
+            return "stock";
+        }
+
+        String normalized = assetType.trim().toLowerCase(Locale.ROOT);
+        return switch (normalized) {
+            case "stock", "fund", "bond" -> normalized;
+            default -> "stock";
+        };
+    }
+
+    private String normalizeKeyword(String keyword) {
+        return keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String normalizeSymbol(String symbol) {
+        return symbol == null ? "" : symbol.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private boolean containsIgnoreCase(String value, String normalizedKeyword) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(normalizedKeyword);
+    }
+
+    private String sanitizeText(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return HTML_TAG_PATTERN.matcher(value).replaceAll("").trim();
+    }
+
+    private boolean looksLikeCommonStock(CatalogEntry entry) {
+        if (entry == null || entry.name() == null) {
+            return false;
+        }
+
+        String normalizedName = entry.name().toLowerCase(Locale.ROOT);
+        return !normalizedName.contains(" etf")
+                && !normalizedName.contains(" etn")
+                && !normalizedName.contains(" fund")
+                && !normalizedName.contains(" trust")
+                && !normalizedName.contains(" notes")
+                && !normalizedName.contains("income")
+                && !normalizedName.contains("yield");
+    }
+
+    private List<BatchQuote> fetchBatchQuotes(String region, List<String> symbols) {
+        List<List<String>> chunks = new ArrayList<>();
+        for (int index = 0; index < symbols.size(); index += QUOTE_BATCH_SIZE) {
+            chunks.add(symbols.subList(index, Math.min(index + QUOTE_BATCH_SIZE, symbols.size())));
+        }
+
+        List<BatchQuote> quotes = new ArrayList<>();
+        for (List<String> chunk : chunks) {
+            try {
+                quotes.addAll(fetchQuoteChunk(region, chunk));
+            } catch (BusinessException exception) {
+                log.warn("Skipping iTick mover quote chunk {} after provider error: {}", chunk, exception.getMessage());
+            }
+            sleepQuietly(MOVER_REQUEST_DELAY_MILLIS);
+        }
+        return quotes.stream().filter(Objects::nonNull).toList();
+    }
+
+    private List<BatchQuote> fetchQuoteChunk(String region, List<String> symbols) {
+        JsonNode data = requestData("batch quotes " + String.join(",", symbols), uriBuilder -> uriBuilder
+                .path("/stock/quotes")
+                .queryParam("region", region)
+                .queryParam("codes", String.join(",", symbols))
+                .build());
+
+        List<BatchQuote> quotes = new ArrayList<>();
+        for (String symbol : symbols) {
+            JsonNode quoteNode = data.path(symbol);
+            if (quoteNode.isMissingNode() || quoteNode.isNull()) {
+                continue;
+            }
+            quotes.add(new BatchQuote(
+                    normalizeSymbol(text(quoteNode, "s")),
+                    decimal(quoteNode, "ld"),
+                    decimal(quoteNode, "ch"),
+                    decimal(quoteNode, "chp")
+            ));
+        }
+        return quotes;
+    }
+
+    private MarketMoverResponse toMarketMover(BatchQuote quote, CatalogEntry entry, boolean positive) {
+        return new MarketMoverResponse(
+                quote.symbol(),
+                entry == null ? quote.symbol() : entry.name(),
+                quote.lastPrice(),
+                quote.changeAmount(),
+                quote.changePercent(),
+                positive
+        );
+    }
+
     private ResolvedSymbol resolveSymbol(String symbol) {
-        String normalized = symbol == null ? "" : symbol.trim().toUpperCase(Locale.ROOT);
+        String normalized = normalizeSymbol(symbol);
         if (normalized.isBlank()) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "Symbol is required");
         }
@@ -264,6 +542,32 @@ public class ItickFinanceClient {
         return null;
     }
 
+    private void sleepQuietly(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
     private record ResolvedSymbol(String region, String code, String displaySymbol) {
+    }
+
+    private record CatalogEntry(
+            String symbol,
+            String name,
+            String exchange,
+            String assetType,
+            String sector,
+            String slug
+    ) {
+    }
+
+    private record BatchQuote(
+            String symbol,
+            BigDecimal lastPrice,
+            BigDecimal changeAmount,
+            BigDecimal changePercent
+    ) {
     }
 }
