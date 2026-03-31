@@ -13,6 +13,7 @@ public record MarketQuote(
         BigDecimal marketCap,
         BigDecimal pe,
         BigDecimal eps,
-        BigDecimal dividendYield
+        BigDecimal dividendYield,
+        String iconUrl
 ) {
 }

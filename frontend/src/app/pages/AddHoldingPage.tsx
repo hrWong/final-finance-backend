@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Search, Bell, Settings, TrendingUp, TrendingDown } from "lucide-react";
 import { BuyModal } from "../components/BuyModal";
+import { InstrumentIcon } from "../components/InstrumentIcon";
 import { searchAssets, getStockOverview } from "../lib/api";
 import { formatMoney, formatPercent } from "../lib/formatters";
 import { getInstrumentIcon } from "../lib/instruments";
@@ -13,6 +14,7 @@ interface SearchRow {
   name: string;
   ticker: string;
   icon: string;
+  iconUrl?: string | null;
   currentPrice: string;
   change: string;
   changePercent: string;
@@ -40,6 +42,7 @@ function buildSearchRow(
     name: asset.nameZh || asset.name || asset.symbol,
     ticker: asset.symbol,
     icon: getInstrumentIcon(asset.symbol, asset.assetType),
+    iconUrl: overview?.iconUrl,
     currentPrice: formatMoney(overview?.lastPrice, currency),
     change: formatMoney(overview?.changeAmount, currency, { signed: true }),
     changePercent: formatPercent(overview?.changePercent, { digits: 2, signed: true }),
@@ -79,12 +82,18 @@ export function AddHoldingPage() {
         return;
       }
 
-      const enriched = await Promise.all(
-        assets.slice(0, 12).map(async (asset) => {
-          const overview = await getStockOverview(asset.symbol);
-          return buildSearchRow(asset, overview);
-        }),
-      );
+      const enriched: SearchRow[] = [];
+      for (const asset of assets.slice(0, 12)) {
+        const overview = await getStockOverview(asset.symbol);
+        enriched.push(buildSearchRow(asset, overview));
+
+        if (cancelled) {
+          return;
+        }
+
+        // Pace iTick-dependent overview requests to avoid 429 bursts on page load.
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
 
       if (cancelled) {
         return;
@@ -194,9 +203,14 @@ export function AddHoldingPage() {
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <span className="text-lg">{item.icon}</span>
-                        </div>
+                        <InstrumentIcon
+                          alt={`${item.name} icon`}
+                          fallback={item.icon}
+                          iconUrl={item.iconUrl}
+                          containerClassName="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0"
+                          imageClassName="w-6 h-6 rounded"
+                          fallbackClassName="text-lg"
+                        />
                         <div>
                           <div className="text-sm font-medium text-gray-900 hover:text-blue-500">
                             {item.name}

@@ -33,6 +33,7 @@ public class StockService {
                 quote.pe(),
                 quote.eps(),
                 quote.dividendYield(),
+                quote.iconUrl(),
                 List.of("Stocks")
         );
     }

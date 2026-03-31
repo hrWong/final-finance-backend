@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router";
 import { Star, Plus, Share2, ChevronDown } from "lucide-react";
 import { StockChart } from "../components/StockChart";
+import { InstrumentIcon } from "../components/InstrumentIcon";
 import { StockSidebar } from "../components/StockSidebar";
 import { MyPositions } from "../components/MyPositions";
 import { TransactionsTable } from "../components/TransactionsTable";
@@ -59,6 +60,7 @@ export function StockDetailPage() {
   const displayCurrency = overview?.currency || asset?.currency || "USD";
   const displayName = overview?.name || asset?.nameZh || asset?.name || normalizedSymbol;
   const displayExchange = overview?.exchange || asset?.exchange || "--";
+  const displayIconUrl = asset?.iconUrl || overview?.iconUrl;
   const priceText = formatMoney(overview?.lastPrice, displayCurrency);
   const changeText = formatMoney(overview?.changeAmount, displayCurrency, { signed: true });
   const changePercentText = formatPercent(overview?.changePercent, { digits: 2, signed: true });
@@ -128,9 +130,14 @@ export function StockDetailPage() {
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
           <div className="flex items-start justify-between mb-6">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-black rounded-xl flex items-center justify-center">
-                <span className="text-3xl">{getInstrumentIcon(normalizedSymbol, asset?.assetType)}</span>
-              </div>
+              <InstrumentIcon
+                alt={`${displayName} icon`}
+                fallback={getInstrumentIcon(normalizedSymbol, asset?.assetType)}
+                iconUrl={displayIconUrl}
+                containerClassName="w-14 h-14 bg-black rounded-xl flex items-center justify-center overflow-hidden"
+                imageClassName="w-9 h-9 rounded-lg bg-white object-contain p-1"
+                fallbackClassName="text-3xl"
+              />
               <div>
                 <div className="flex items-center gap-3">
                   <h1 className="text-2xl font-semibold text-gray-900">

@@ -43,6 +43,7 @@ export interface StockOverviewResponse {
   pe: number | null;
   eps: number | null;
   dividendYield: number | null;
+  iconUrl: string | null;
   breadcrumb: string[] | null;
 }
 

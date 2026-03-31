@@ -15,6 +15,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.math.BigDecimal;
+import java.net.URI;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -25,7 +26,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -85,7 +85,8 @@ public class ItickFinanceClient {
                 decimal(infoData, "mcb"),
                 decimal(infoData, "pet"),
                 null,
-                null
+                null,
+                buildIconUrl(text(infoData, "wu"))
         );
     }
 
@@ -176,7 +177,7 @@ public class ItickFinanceClient {
                 firstNonBlank(text(infoData, "s"), matchedEntry.sector()),
                 text(infoData, "i"),
                 null,
-                null,
+                buildIconUrl(text(infoData, "wu")),
                 "ACTIVE"
         );
     }
@@ -540,6 +541,26 @@ public class ItickFinanceClient {
             }
         }
         return null;
+    }
+
+    private String buildIconUrl(String websiteUrl) {
+        if (websiteUrl == null || websiteUrl.isBlank()) {
+            return null;
+        }
+
+        try {
+            URI uri = URI.create(websiteUrl.contains("://") ? websiteUrl : "https://" + websiteUrl);
+            String host = uri.getHost();
+            if (host == null || host.isBlank()) {
+                return null;
+            }
+
+            String scheme = "https";
+            return scheme + "://" + host + "/favicon.ico";
+        } catch (IllegalArgumentException exception) {
+            log.warn("Failed to derive favicon URL from company website {}", websiteUrl, exception);
+            return null;
+        }
     }
 
     private void sleepQuietly(long millis) {

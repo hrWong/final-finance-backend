@@ -127,11 +127,6 @@ export function getAsset(symbol: string) {
 
 export function searchAssets(keyword: string, type?: string) {
   const trimmedKeyword = keyword.trim();
-
-  if (!trimmedKeyword) {
-    return Promise.resolve<AssetSearchItemResponse[] | null>([]);
-  }
-
   const params = new URLSearchParams({ q: trimmedKeyword });
   if (type) {
     params.set("type", type);
