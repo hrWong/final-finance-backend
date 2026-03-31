@@ -2,6 +2,7 @@ package com.vazy.finalfinance.transaction.service;
 
 import com.vazy.finalfinance.asset.entity.Asset;
 import com.vazy.finalfinance.asset.mapper.AssetMapper;
+import com.vazy.finalfinance.asset.service.AssetService;
 import com.vazy.finalfinance.position.entity.PortfolioPosition;
 import com.vazy.finalfinance.position.mapper.PortfolioPositionMapper;
 import com.vazy.finalfinance.transaction.dto.CreateTransactionRequest;
@@ -27,6 +28,7 @@ public class TransactionService {
 
     private final TransactionMapper transactionMapper;
     private final AssetMapper assetMapper;
+    private final AssetService assetService;
     private final PortfolioPositionMapper positionMapper;
     private final PositionRebuildService positionRebuildService;
     private final WalletService walletService;
@@ -49,8 +51,8 @@ public class TransactionService {
 
     @Transactional
     public TransactionResponse create(CreateTransactionRequest request) {
-        // 1. 通过 symbol 查找 asset
-        Asset asset = assetMapper.findBySymbol(request.symbol());
+        // 1. 通过 symbol 查找 asset（本地没有则自动从 iTick 拉取入库）
+        Asset asset = assetService.getOrCreateAsset(request.symbol());
         if (asset == null) {
             throw new IllegalArgumentException("Asset not found: " + request.symbol());
         }
