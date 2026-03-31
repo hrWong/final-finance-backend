@@ -10,6 +10,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.transport.ProxyProvider;
@@ -30,6 +31,7 @@ public class WebClientConfig {
             @Value("${market.itick.proxy-uri:}") String configuredProxyUri,
             @Value("${market.itick.connect-timeout-millis:5000}") int connectTimeoutMillis,
             @Value("${market.itick.response-timeout-seconds:10}") int responseTimeoutSeconds,
+            @Value("${market.itick.max-in-memory-size-bytes:16777216}") int maxInMemorySizeBytes,
             @Value("${market.itick.user-agent:Mozilla/5.0}") String userAgent,
             Environment environment
     ) {
@@ -59,10 +61,15 @@ public class WebClientConfig {
                     proxySettings.type(), proxySettings.host(), proxySettings.port());
         }
 
+        ExchangeStrategies exchangeStrategies = ExchangeStrategies.builder()
+                .codecs(codecs -> codecs.defaultCodecs().maxInMemorySize(maxInMemorySizeBytes))
+                .build();
+
         WebClient.Builder webClientBuilder = builder
                 .baseUrl(trimTrailingSlash(baseUrl))
                 .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
                 .defaultHeader(HttpHeaders.USER_AGENT, userAgent)
+                .exchangeStrategies(exchangeStrategies)
                 .clientConnector(new ReactorClientHttpConnector(httpClient));
 
         if (token != null && !token.isBlank()) {

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Search, Bell, Settings, TrendingUp, TrendingDown } from "lucide-react";
 import { BuyModal } from "../components/BuyModal";
+import { InstrumentIcon } from "../components/InstrumentIcon";
 import { searchAssets, getStockOverview } from "../lib/api";
 import { formatMoney, formatPercent } from "../lib/formatters";
 import { getInstrumentIcon } from "../lib/instruments";
@@ -13,6 +14,7 @@ interface SearchRow {
   name: string;
   ticker: string;
   icon: string;
+  iconUrl?: string | null;
   currentPrice: string;
   change: string;
   changePercent: string;
@@ -40,6 +42,7 @@ function buildSearchRow(
     name: asset.nameZh || asset.name || asset.symbol,
     ticker: asset.symbol,
     icon: getInstrumentIcon(asset.symbol, asset.assetType),
+    iconUrl: overview?.iconUrl,
     currentPrice: formatMoney(overview?.lastPrice, currency),
     change: formatMoney(overview?.changeAmount, currency, { signed: true }),
     changePercent: formatPercent(overview?.changePercent, { digits: 2, signed: true }),
@@ -66,12 +69,6 @@ export function AddHoldingPage() {
     let cancelled = false;
 
     async function loadSearchResults() {
-      if (!searchQuery.trim()) {
-        setResults([]);
-        setLoading(false);
-        return;
-      }
-
       setLoading(true);
       const assets = await searchAssets(searchQuery, typeMap[activeTab]);
 
@@ -85,12 +82,18 @@ export function AddHoldingPage() {
         return;
       }
 
-      const enriched = await Promise.all(
-        assets.slice(0, 12).map(async (asset) => {
-          const overview = await getStockOverview(asset.symbol);
-          return buildSearchRow(asset, overview);
-        }),
-      );
+      const enriched: SearchRow[] = [];
+      for (const asset of assets.slice(0, 12)) {
+        const overview = await getStockOverview(asset.symbol);
+        enriched.push(buildSearchRow(asset, overview));
+
+        if (cancelled) {
+          return;
+        }
+
+        // Pace iTick-dependent overview requests to avoid 429 bursts on page load.
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
 
       if (cancelled) {
         return;
@@ -131,8 +134,8 @@ export function AddHoldingPage() {
           <button
             onClick={() => setActiveTab("stocks")}
             className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeTab === "stocks"
-                ? "bg-blue-500 text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
+              ? "bg-blue-500 text-white"
+              : "bg-white text-gray-600 hover:bg-gray-50"
               }`}
           >
             股票
@@ -140,8 +143,8 @@ export function AddHoldingPage() {
           <button
             onClick={() => setActiveTab("funds")}
             className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeTab === "funds"
-                ? "bg-blue-500 text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
+              ? "bg-blue-500 text-white"
+              : "bg-white text-gray-600 hover:bg-gray-50"
               }`}
           >
             基金
@@ -149,8 +152,8 @@ export function AddHoldingPage() {
           <button
             onClick={() => setActiveTab("bonds")}
             className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeTab === "bonds"
-                ? "bg-blue-500 text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
+              ? "bg-blue-500 text-white"
+              : "bg-white text-gray-600 hover:bg-gray-50"
               }`}
           >
             债券
@@ -162,7 +165,7 @@ export function AddHoldingPage() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="搜索股票代码或公司名称..."
+              placeholder="搜索股票代码或公司名称，或直接浏览默认列表..."
               value={searchQuery}
               onChange={(event) => {
                 setSearchTouched(true);
@@ -200,9 +203,14 @@ export function AddHoldingPage() {
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <span className="text-lg">{item.icon}</span>
-                        </div>
+                        <InstrumentIcon
+                          alt={`${item.name} icon`}
+                          fallback={item.icon}
+                          iconUrl={item.iconUrl}
+                          containerClassName="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0"
+                          imageClassName="w-6 h-6 rounded"
+                          fallbackClassName="text-lg"
+                        />
                         <div>
                           <div className="text-sm font-medium text-gray-900 hover:text-blue-500">
                             {item.name}
@@ -258,10 +266,10 @@ export function AddHoldingPage() {
           ) : (
             <div className="p-8">
               <EmptyState
-                title={searchTouched ? "没有搜索到可用资产" : "输入关键字开始搜索"}
+                title={searchTouched ? "没有搜索到可用资产" : "暂无可展示资产"}
                 description={searchTouched
-                  ? "如果后端搜索接口未完成或没有数据，这里会保持为空。"
-                  : "该页面不再使用前端 mock 列表，只展示后端搜索结果。"}
+                  ? "后端已经接到真实资产搜索；如果这里为空，通常是当前关键字没有匹配到结果。"
+                  : "页面现在会优先展示后端返回的默认资产列表；如果为空，说明当前数据源没有返回可用标的。"}
               />
             </div>
           )}
