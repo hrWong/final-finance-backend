@@ -134,8 +134,8 @@ export function AddHoldingPage() {
           <button
             onClick={() => setActiveTab("stocks")}
             className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeTab === "stocks"
-                ? "bg-blue-500 text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
+              ? "bg-blue-500 text-white"
+              : "bg-white text-gray-600 hover:bg-gray-50"
               }`}
           >
             股票
@@ -143,8 +143,8 @@ export function AddHoldingPage() {
           <button
             onClick={() => setActiveTab("funds")}
             className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeTab === "funds"
-                ? "bg-blue-500 text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
+              ? "bg-blue-500 text-white"
+              : "bg-white text-gray-600 hover:bg-gray-50"
               }`}
           >
             基金
@@ -152,8 +152,8 @@ export function AddHoldingPage() {
           <button
             onClick={() => setActiveTab("bonds")}
             className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeTab === "bonds"
-                ? "bg-blue-500 text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
+              ? "bg-blue-500 text-white"
+              : "bg-white text-gray-600 hover:bg-gray-50"
               }`}
           >
             债券
