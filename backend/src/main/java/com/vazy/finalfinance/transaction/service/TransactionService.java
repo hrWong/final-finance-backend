@@ -2,6 +2,8 @@ package com.vazy.finalfinance.transaction.service;
 
 import com.vazy.finalfinance.asset.entity.Asset;
 import com.vazy.finalfinance.asset.mapper.AssetMapper;
+import com.vazy.finalfinance.position.entity.PortfolioPosition;
+import com.vazy.finalfinance.position.mapper.PortfolioPositionMapper;
 import com.vazy.finalfinance.transaction.dto.CreateTransactionRequest;
 import com.vazy.finalfinance.transaction.dto.UpdateTransactionRequest;
 import com.vazy.finalfinance.transaction.entity.Transaction;
@@ -24,6 +26,7 @@ public class TransactionService {
 
     private final TransactionMapper transactionMapper;
     private final AssetMapper assetMapper;
+    private final PortfolioPositionMapper positionMapper;
     private final PositionRebuildService positionRebuildService;
 
     public List<TransactionResponse> findAll(String symbol, String type) {
@@ -50,9 +53,21 @@ public class TransactionService {
             throw new IllegalArgumentException("Asset not found: " + request.symbol());
         }
 
-        // 2. 计算金额
+        // 2. 卖出时校验持仓数量
+        if ("SELL".equalsIgnoreCase(request.type())) {
+            PortfolioPosition position = positionMapper.findByPortfolioAndAsset(DEFAULT_PORTFOLIO_ID, asset.getId());
+            BigDecimal holdingQty = position != null ? position.getQuantity() : BigDecimal.ZERO;
+            if (holdingQty.compareTo(request.quantity()) < 0) {
+                throw new IllegalArgumentException(
+                        "Insufficient holding: you have " + holdingQty + " shares but trying to sell " + request.quantity());
+            }
+        }
+
+        // 3. 计算金额（卖出时 netAmount = grossAmount - commission - tax）
         BigDecimal grossAmount = request.quantity().multiply(request.price());
-        BigDecimal netAmount = grossAmount.add(request.commission()).add(request.tax());
+        BigDecimal netAmount = "SELL".equalsIgnoreCase(request.type())
+                ? grossAmount.subtract(request.commission()).subtract(request.tax())
+                : grossAmount.add(request.commission()).add(request.tax());
 
         // 3. 构建 entity 并插入数据库
         Transaction tx = new Transaction();
