@@ -21,6 +21,14 @@
         <result column="updated_at"  property="updatedAt"/>
     </resultMap>
 
+    <!-- 根据 ID 查询 -->
+    <select id="findById" parameterType="long" resultMap="BaseResultMap">
+        SELECT *
+        FROM assets
+        WHERE id = #{id}
+        LIMIT 1
+    </select>
+
     <!-- 根据 symbol 精确查询 -->
     <select id="findBySymbol" parameterType="string" resultMap="BaseResultMap">
         SELECT *

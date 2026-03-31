@@ -35,7 +35,7 @@ market:
     base-url: https://api-free.itick.org
     token: 1dcd5e20c51a459d830af23f77861efaff2fa561c75548a491d1cf9a04335197
     # Optional explicit proxy. If omitted, the client will try HTTPS_PROXY/http_proxy/ALL_PROXY env vars.
-    proxy-uri: 127.0.0.1:7897
+    proxy-uri: http://127.0.0.1:7897
     connect-timeout-millis: 5000
     response-timeout-seconds: 10
     user-agent: Mozilla/5.0

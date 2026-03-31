@@ -7,6 +7,8 @@ import java.util.List;
 
 @Mapper
 public interface AssetMapper {
+    Asset findById(Long id);
+
     Asset findBySymbol(String symbol);
 
     List<Asset> search(String keyword, String assetType);
