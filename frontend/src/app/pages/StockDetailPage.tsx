@@ -65,9 +65,9 @@ export function StockDetailPage() {
   const changeText = formatMoney(overview?.changeAmount, displayCurrency, { signed: true });
   const changePercentText = formatPercent(overview?.changePercent, { digits: 2, signed: true });
   const isNegative = Number(overview?.changeAmount ?? 0) < 0;
-  const breadcrumb = overview?.breadcrumb?.length
-    ? overview.breadcrumb
-    : ["Stocks", normalizedSymbol];
+  const breadcrumb = (
+    overview?.breadcrumb?.length ? overview.breadcrumb : [normalizedSymbol]
+  ).filter((item: string) => item.toLowerCase() !== "stocks");
   const marketCapText = formatMoney(overview?.marketCap, displayCurrency, { compact: true, maximumFractionDigits: 1 });
   const peText = overview?.pe !== null && overview?.pe !== undefined ? String(overview.pe) : "--";
   const epsText = overview?.eps !== null && overview?.eps !== undefined ? String(overview.eps) : "--";
@@ -75,46 +75,6 @@ export function StockDetailPage() {
 
   return (
     <div className="min-h-screen bg-[#f8f9fa]">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-[1400px] mx-auto px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-8">
-              <div className="flex items-center gap-2">
-                <div className="text-gray-900 font-semibold text-sm">
-                  SNOWBALL
-                </div>
-                <div className="text-gray-600 text-sm">ANALYTICS</div>
-              </div>
-              <nav className="flex items-center gap-6">
-                <Link to="/" className="text-gray-600 hover:text-gray-900 text-sm">
-                  Tools
-                </Link>
-                <Link to="/" className="text-gray-600 hover:text-gray-900 text-sm">
-                  Community
-                </Link>
-              </nav>
-            </div>
-            <div className="flex items-center gap-3">
-              <button className="p-2 hover:bg-gray-100 rounded-lg">
-                <svg className="w-5 h-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <path d="m21 21-4.35-4.35"></path>
-                </svg>
-              </button>
-              <button className="p-2 hover:bg-gray-100 rounded-lg">
-                <div className="w-5 h-5 bg-yellow-400 rounded-full"></div>
-              </button>
-              <Link
-                to="/analysis"
-                className="px-4 py-2 bg-blue-100 text-blue-600 rounded-lg text-sm hover:bg-blue-200"
-              >
-                My portfolios
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
-
       <main className="max-w-[1400px] mx-auto px-8 py-6">
         <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
           {breadcrumb.map((item, index) => (
@@ -172,9 +132,8 @@ export function StockDetailPage() {
                 <span className={`text-lg ${isNegative ? "text-red-500" : "text-emerald-500"}`}>
                   {changeText}
                 </span>
-                <span className={`text-sm flex items-center gap-1 px-2 py-1 rounded ${
-                  isNegative ? "bg-red-50 text-red-500" : "bg-emerald-50 text-emerald-500"
-                }`}>
+                <span className={`text-sm flex items-center gap-1 px-2 py-1 rounded ${isNegative ? "bg-red-50 text-red-500" : "bg-emerald-50 text-emerald-500"
+                  }`}>
                   {isNegative ? "▼" : "▲"} {changePercentText}
                 </span>
               </div>
@@ -205,25 +164,6 @@ export function StockDetailPage() {
           </div>
         </div>
 
-        <div className="border-b border-gray-200 mb-6">
-          <div className="flex items-center gap-8">
-            <button className="px-1 pb-3 text-blue-500 font-medium border-b-2 border-blue-500">
-              Overview
-            </button>
-            <button className="px-1 pb-3 text-gray-600 hover:text-gray-900">
-              Dividends
-            </button>
-            <button className="px-1 pb-3 text-gray-600 hover:text-gray-900">
-              Financials
-            </button>
-            <button className="px-1 pb-3 text-gray-600 hover:text-gray-900">
-              News
-            </button>
-            <button className="px-1 pb-3 text-gray-600 hover:text-gray-900">
-              Community
-            </button>
-          </div>
-        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
