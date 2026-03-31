@@ -18,7 +18,9 @@ import java.math.BigDecimal;
 import java.net.URI;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -92,13 +94,17 @@ public class ItickFinanceClient {
 
     public List<MarketHistoryPoint> getHistory(String symbol, String range, String interval) {
         ResolvedSymbol resolvedSymbol = resolveSymbol(symbol);
+        String normalizedRange = normalizeRange(range);
+        String normalizedInterval = normalizeInterval(interval);
+        ZoneId marketZone = resolveMarketZone(resolvedSymbol.region());
+        HistoryWindow historyWindow = resolveHistoryWindow(normalizedRange, normalizedInterval, marketZone);
         JsonNode data = requestData(resolvedSymbol.displaySymbol(), uriBuilder -> uriBuilder
                 .path("/stock/kline")
                 .queryParam("region", resolvedSymbol.region())
                 .queryParam("code", resolvedSymbol.code())
-                .queryParam("kType", resolveKType(interval))
-                .queryParam("limit", resolveLimit(range, interval))
-                .queryParam("et", System.currentTimeMillis())
+                .queryParam("kType", resolveKType(normalizedInterval))
+                .queryParam("limit", historyWindow.limit())
+                .queryParam("et", historyWindow.endTimestampMillis())
                 .build());
 
         if (!data.isArray()) {
@@ -106,8 +112,10 @@ public class ItickFinanceClient {
         }
 
         return java.util.stream.StreamSupport.stream(data.spliterator(), false)
-                .map(this::toHistoryPoint)
+                .map(node -> toHistoryPoint(node, marketZone))
                 .filter(java.util.Objects::nonNull)
+                .filter(point -> historyWindow.startDate() == null || !point.date().isBefore(historyWindow.startDate()))
+                .filter(point -> !point.date().isAfter(historyWindow.endDate()))
                 .sorted(Comparator.comparing(MarketHistoryPoint::date))
                 .toList();
     }
@@ -262,7 +270,7 @@ public class ItickFinanceClient {
         }
     }
 
-    private MarketHistoryPoint toHistoryPoint(JsonNode node) {
+    private MarketHistoryPoint toHistoryPoint(JsonNode node, ZoneId marketZone) {
         BigDecimal close = decimal(node, "c");
         JsonNode timestampNode = node.path("t");
         if (close == null || timestampNode.isMissingNode() || timestampNode.isNull() || !timestampNode.canConvertToLong()) {
@@ -270,58 +278,69 @@ public class ItickFinanceClient {
         }
 
         LocalDate date = Instant.ofEpochMilli(timestampNode.asLong())
-                .atZone(ZoneOffset.UTC)
+                .atZone(marketZone)
                 .toLocalDate();
         return new MarketHistoryPoint(date, close);
     }
 
     private String resolveKType(String interval) {
-        String normalizedInterval = interval == null ? "1d" : interval.trim().toLowerCase(Locale.ROOT);
-        return switch (normalizedInterval) {
+        return switch (normalizeInterval(interval)) {
             case "1wk", "1w", "wk", "weekly" -> "9";
             case "1mo", "monthly" -> "10";
             default -> "8";
         };
     }
 
-    private int resolveLimit(String range, String interval) {
-        String normalizedInterval = interval == null ? "1d" : interval.trim().toLowerCase(Locale.ROOT);
-        if ("1wk".equals(normalizedInterval) || "1w".equals(normalizedInterval) || "wk".equals(normalizedInterval) || "weekly".equals(normalizedInterval)) {
-            return switch (normalizeRange(range)) {
-                case "7d", "1m", "3m" -> 13;
-                case "6m" -> 27;
-                case "ytd", "1y" -> 54;
-                case "5y" -> 261;
-                case "all" -> 520;
-                default -> 54;
-            };
-        }
-        if ("1mo".equals(normalizedInterval) || "monthly".equals(normalizedInterval)) {
-            return switch (normalizeRange(range)) {
-                case "7d", "1m", "3m" -> 3;
-                case "6m" -> 6;
-                case "ytd", "1y" -> 12;
-                case "5y" -> 60;
-                case "all" -> 240;
-                default -> 12;
+    private HistoryWindow resolveHistoryWindow(String normalizedRange, String normalizedInterval, ZoneId marketZone) {
+        LocalDate endDate = LocalDate.now(marketZone);
+        LocalDate startDate = switch (normalizedRange) {
+            case "7d" -> endDate.minusDays(6);
+            case "1m" -> endDate.minusMonths(1);
+            case "3m" -> endDate.minusMonths(3);
+            case "6m" -> endDate.minusMonths(6);
+            case "ytd" -> endDate.withDayOfYear(1);
+            case "1y" -> endDate.minusYears(1);
+            case "5y" -> endDate.minusYears(5);
+            case "all" -> null;
+            default -> endDate.minusYears(1);
+        };
+
+        return new HistoryWindow(
+                startDate,
+                endDate,
+                resolveLimit(startDate, endDate, normalizedInterval),
+                ZonedDateTime.now(marketZone).toInstant().toEpochMilli()
+        );
+    }
+
+    private int resolveLimit(LocalDate startDate, LocalDate endDate, String normalizedInterval) {
+        if (startDate == null) {
+            return switch (normalizedInterval) {
+                case "1wk", "1w", "wk", "weekly" -> 520;
+                case "1mo", "monthly" -> 240;
+                default -> 5000;
             };
         }
 
-        return switch (normalizeRange(range)) {
-            case "7d" -> 7;
-            case "1m" -> 31;
-            case "3m" -> 92;
-            case "6m" -> 183;
-            case "ytd" -> 120;
-            case "1y" -> 366;
-            case "5y" -> 1826;
-            case "all" -> 5000;
-            default -> 366;
-        };
+        if ("1wk".equals(normalizedInterval) || "1w".equals(normalizedInterval) || "wk".equals(normalizedInterval) || "weekly".equals(normalizedInterval)) {
+            long weeks = Math.max(ChronoUnit.WEEKS.between(startDate, endDate) + 4, 4);
+            return Math.toIntExact(Math.min(weeks, 520));
+        }
+        if ("1mo".equals(normalizedInterval) || "monthly".equals(normalizedInterval)) {
+            long months = Math.max(ChronoUnit.MONTHS.between(startDate.withDayOfMonth(1), endDate.withDayOfMonth(1)) + 2, 2);
+            return Math.toIntExact(Math.min(months, 240));
+        }
+
+        long days = Math.max(ChronoUnit.DAYS.between(startDate, endDate) + 16, 16);
+        return Math.toIntExact(Math.min(days, 5000));
     }
 
     private String normalizeRange(String range) {
         return range == null || range.isBlank() ? "1y" : range.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String normalizeInterval(String interval) {
+        return interval == null || interval.isBlank() ? "1d" : interval.trim().toLowerCase(Locale.ROOT);
     }
 
     private List<CatalogEntry> loadCatalog(String assetType, String region) {
@@ -511,6 +530,25 @@ public class ItickFinanceClient {
         return new ResolvedSymbol("US", normalized, normalized);
     }
 
+    private ZoneId resolveMarketZone(String region) {
+        return switch (region) {
+            case "US" -> ZoneId.of("America/New_York");
+            case "HK" -> ZoneId.of("Asia/Hong_Kong");
+            case "SH", "SZ" -> ZoneId.of("Asia/Shanghai");
+            case "SG" -> ZoneId.of("Asia/Singapore");
+            case "JP" -> ZoneId.of("Asia/Tokyo");
+            case "TW" -> ZoneId.of("Asia/Taipei");
+            case "GB" -> ZoneId.of("Europe/London");
+            case "DE" -> ZoneId.of("Europe/Berlin");
+            case "FR" -> ZoneId.of("Europe/Paris");
+            case "IT" -> ZoneId.of("Europe/Rome");
+            case "NL" -> ZoneId.of("Europe/Amsterdam");
+            case "AU" -> ZoneId.of("Australia/Sydney");
+            case "CA" -> ZoneId.of("America/Toronto");
+            default -> ZoneId.of("UTC");
+        };
+    }
+
     private BigDecimal decimal(JsonNode node, String fieldName) {
         if (node == null) {
             return null;
@@ -589,6 +627,14 @@ public class ItickFinanceClient {
             BigDecimal lastPrice,
             BigDecimal changeAmount,
             BigDecimal changePercent
+    ) {
+    }
+
+    private record HistoryWindow(
+            LocalDate startDate,
+            LocalDate endDate,
+            int limit,
+            long endTimestampMillis
     ) {
     }
 }
