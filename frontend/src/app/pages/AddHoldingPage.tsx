@@ -119,40 +119,7 @@ export function AddHoldingPage() {
 
   return (
     <div className="min-h-screen bg-[#f8f9fa]">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-[1400px] mx-auto px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-8">
-              <div className="flex items-center gap-2">
-                <div className="text-gray-900 font-semibold text-sm">SNOWBALL</div>
-                <div className="text-gray-600 text-sm">ANALYTICS</div>
-              </div>
-              <nav className="flex items-center gap-6">
-                <Link to="/" className="text-gray-600 hover:text-gray-900 text-sm">
-                  仪表板
-                </Link>
-                <Link to="/analysis" className="text-gray-600 hover:text-gray-900 text-sm">
-                  分析
-                </Link>
-                <Link to="/add-holding" className="text-blue-500 text-sm font-medium">
-                  添加
-                </Link>
-              </nav>
-            </div>
-            <div className="flex items-center gap-3">
-              <button className="p-2 hover:bg-gray-100 rounded-lg">
-                <Search className="w-5 h-5 text-gray-600" />
-              </button>
-              <button className="p-2 hover:bg-gray-100 rounded-lg">
-                <Bell className="w-5 h-5 text-gray-600" />
-              </button>
-              <button className="p-2 hover:bg-gray-100 rounded-lg">
-                <Settings className="w-5 h-5 text-gray-600" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+
 
       <main className="max-w-[1400px] mx-auto px-8 py-8">
         <div className="mb-8">
@@ -163,31 +130,28 @@ export function AddHoldingPage() {
         <div className="flex items-center gap-2 mb-6">
           <button
             onClick={() => setActiveTab("stocks")}
-            className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === "stocks"
+            className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeTab === "stocks"
                 ? "bg-blue-500 text-white"
                 : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
+              }`}
           >
             股票
           </button>
           <button
             onClick={() => setActiveTab("funds")}
-            className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === "funds"
+            className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeTab === "funds"
                 ? "bg-blue-500 text-white"
                 : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
+              }`}
           >
             基金
           </button>
           <button
             onClick={() => setActiveTab("bonds")}
-            className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === "bonds"
+            className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeTab === "bonds"
                 ? "bg-blue-500 text-white"
                 : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
+              }`}
           >
             债券
           </button>
