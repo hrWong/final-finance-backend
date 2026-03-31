@@ -1,5 +1,5 @@
 server:
-  port: 8088
+  port: 8080
 
 spring:
   application:
@@ -9,7 +9,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/final_finance?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8
     username: root
-    password: 123456
+    password:
     driver-class-name: com.mysql.cj.jdbc.Driver
   jackson:
     default-property-inclusion: non_null
@@ -33,9 +33,9 @@ mybatis:
 market:
   itick:
     base-url: https://api-free.itick.org
-    token: 1dcd5e20c51a459d830af23f77861efaff2fa561c75548a491d1cf9a04335197
+    token:
     # Optional explicit proxy. If omitted, the client will try HTTPS_PROXY/http_proxy/ALL_PROXY env vars.
-    proxy-uri: 127.0.0.1:7897
+    proxy-uri:
     connect-timeout-millis: 5000
     response-timeout-seconds: 10
     user-agent: Mozilla/5.0

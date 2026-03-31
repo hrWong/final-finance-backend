@@ -18,6 +18,7 @@ logs/
 .env
 .env.*
 application-local.yml
+backend/src/main/resources/application-local.yml
 
 # Database dumps/backups
 backups/
@@ -32,4 +33,3 @@ backups/*
 # Frontend
 frontend/node_modules/
 frontend/dist/
-
