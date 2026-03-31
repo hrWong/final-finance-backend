@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vazy.finalfinance.asset.mapper.AssetMapper">
+
+    <resultMap id="BaseResultMap" type="com.vazy.finalfinance.asset.entity.Asset">
+        <id     column="id"          property="id"/>
+        <result column="symbol"      property="symbol"/>
+        <result column="exchange"    property="exchange"/>
+        <result column="name"        property="name"/>
+        <result column="name_zh"     property="nameZh"/>
+        <result column="asset_type"  property="assetType"/>
+        <result column="currency"    property="currency"/>
+        <result column="country"     property="country"/>
+        <result column="sector"      property="sector"/>
+        <result column="industry"    property="industry"/>
+        <result column="isin"        property="isin"/>
+        <result column="icon_url"    property="iconUrl"/>
+        <result column="status"      property="status"/>
+        <result column="created_at"  property="createdAt"/>
+        <result column="updated_at"  property="updatedAt"/>
+    </resultMap>
+
+    <!-- 根据 symbol 精确查询 -->
+    <select id="findBySymbol" parameterType="string" resultMap="BaseResultMap">
+        SELECT *
+        FROM assets
+        WHERE symbol = #{symbol}
+          AND status = 'ACTIVE'
+        LIMIT 1
+    </select>
+
+    <!-- 关键字 + 资产类型动态搜索 -->
+    <select id="search" resultMap="BaseResultMap">
+        SELECT *
+        FROM assets
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    symbol   LIKE CONCAT('%', #{keyword}, '%')
+                    OR name  LIKE CONCAT('%', #{keyword}, '%')
+                    OR name_zh LIKE CONCAT('%', #{keyword}, '%')
+                    OR isin  LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+            <if test="assetType != null and assetType != ''">
+                AND asset_type = #{assetType}
+            </if>
+            AND status = 'ACTIVE'
+        </where>
+        ORDER BY symbol ASC
+        LIMIT 50
+    </select>
+
+    <!-- 插入新资产 -->
+    <insert id="insert" parameterType="com.vazy.finalfinance.asset.entity.Asset"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO assets (
+            symbol, exchange, name, name_zh, asset_type, currency,
+            country, sector, industry, isin, icon_url, status,
+            created_at, updated_at
+        ) VALUES (
+            #{symbol}, #{exchange}, #{name}, #{nameZh}, #{assetType}, #{currency},
+            #{country}, #{sector}, #{industry}, #{isin}, #{iconUrl}, #{status},
+            NOW(), NOW()
+        )
+    </insert>
+
+</mapper>

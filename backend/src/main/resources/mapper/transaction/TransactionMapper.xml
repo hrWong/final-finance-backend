@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vazy.finalfinance.transaction.mapper.TransactionMapper">
+
+    <resultMap id="BaseResultMap" type="com.vazy.finalfinance.transaction.entity.Transaction">
+        <id     column="id"           property="id"/>
+        <result column="portfolio_id" property="portfolioId"/>
+        <result column="asset_id"     property="assetId"/>
+        <result column="type"         property="type"/>
+        <result column="trade_date"   property="tradeDate"/>
+        <result column="quantity"     property="quantity"/>
+        <result column="price"        property="price"/>
+        <result column="gross_amount" property="grossAmount"/>
+        <result column="commission"   property="commission"/>
+        <result column="tax"          property="tax"/>
+        <result column="net_amount"   property="netAmount"/>
+        <result column="currency"     property="currency"/>
+        <result column="note"         property="note"/>
+        <result column="created_at"   property="createdAt"/>
+        <result column="updated_at"   property="updatedAt"/>
+    </resultMap>
+
+    <!-- 根据 ID 查询单条交易 -->
+    <select id="findById" parameterType="long" resultMap="BaseResultMap">
+        SELECT *
+        FROM transactions
+        WHERE id = #{id}
+        LIMIT 1
+    </select>
+
+    <!-- 动态查询：支持按 portfolioId / symbol / type 过滤 -->
+    <select id="findAll" resultMap="BaseResultMap">
+        SELECT t.*
+        FROM transactions t
+        LEFT JOIN assets a ON a.id = t.asset_id
+        <where>
+            <if test="portfolioId != null">
+                AND t.portfolio_id = #{portfolioId}
+            </if>
+            <if test="symbol != null and symbol != ''">
+                AND a.symbol = #{symbol}
+            </if>
+            <if test="type != null and type != ''">
+                AND t.type = #{type}
+            </if>
+        </where>
+        ORDER BY t.trade_date DESC, t.id DESC
+    </select>
+
+    <!-- 根据 portfolio + asset 查询历史交易 -->
+    <select id="findByPortfolioAndAsset" resultMap="BaseResultMap">
+        SELECT *
+        FROM transactions
+        WHERE portfolio_id = #{portfolioId}
+          AND asset_id     = #{assetId}
+        ORDER BY trade_date DESC, id DESC
+    </select>
+
+    <!-- 新增交易记录 -->
+    <insert id="insert" parameterType="com.vazy.finalfinance.transaction.entity.Transaction"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO transactions (
+            portfolio_id, asset_id, type, trade_date, quantity, price,
+            gross_amount, commission, tax, net_amount, currency, note,
+            created_at, updated_at
+        ) VALUES (
+            #{portfolioId}, #{assetId}, #{type}, #{tradeDate}, #{quantity}, #{price},
+            #{grossAmount}, #{commission}, #{tax}, #{netAmount}, #{currency}, #{note},
+            NOW(), NOW()
+        )
+    </insert>
+
+    <!-- 更新交易记录（用于修正备注/金额等） -->
+    <update id="update" parameterType="com.vazy.finalfinance.transaction.entity.Transaction">
+        UPDATE transactions
+        SET type         = #{type},
+            trade_date   = #{tradeDate},
+            quantity     = #{quantity},
+            price        = #{price},
+            gross_amount = #{grossAmount},
+            commission   = #{commission},
+            tax          = #{tax},
+            net_amount   = #{netAmount},
+            currency     = #{currency},
+            note         = #{note},
+            updated_at   = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除交易记录 -->
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM transactions
+        WHERE id = #{id}
+    </delete>
+
+</mapper>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vazy.finalfinance.portfolio.mapper.PortfolioMapper">
+
+    <resultMap id="BaseResultMap" type="com.vazy.finalfinance.portfolio.entity.Portfolio">
+        <id     column="id"            property="id"/>
+        <result column="name"          property="name"/>
+        <result column="base_currency" property="baseCurrency"/>
+        <result column="is_default"    property="isDefault"/>
+        <result column="description"   property="description"/>
+        <result column="created_at"    property="createdAt"/>
+        <result column="updated_at"    property="updatedAt"/>
+    </resultMap>
+
+    <!-- 查询默认作品集（is_default=1），不存在则返回第一条 -->
+    <select id="findDefaultPortfolio" resultMap="BaseResultMap">
+        SELECT *
+        FROM portfolios
+        ORDER BY is_default DESC, id ASC
+        LIMIT 1
+    </select>
+
+</mapper>

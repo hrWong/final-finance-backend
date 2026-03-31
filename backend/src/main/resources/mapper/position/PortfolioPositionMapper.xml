@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vazy.finalfinance.position.mapper.PortfolioPositionMapper">
+
+    <resultMap id="BaseResultMap" type="com.vazy.finalfinance.position.entity.PortfolioPosition">
+        <id     column="id"                   property="id"/>
+        <result column="portfolio_id"         property="portfolioId"/>
+        <result column="asset_id"             property="assetId"/>
+        <result column="quantity"             property="quantity"/>
+        <result column="avg_cost"             property="avgCost"/>
+        <result column="cost_basis"           property="costBasis"/>
+        <result column="market_value"         property="marketValue"/>
+        <result column="unrealized_pnl"       property="unrealizedPnl"/>
+        <result column="unrealized_pnl_pct"   property="unrealizedPnlPct"/>
+        <result column="portfolio_weight"     property="portfolioWeight"/>
+        <result column="last_price"           property="lastPrice"/>
+        <result column="price_as_of"          property="priceAsOf"/>
+        <result column="updated_at"           property="updatedAt"/>
+    </resultMap>
+
+    <!-- 根据 portfolio + asset 查询单条持仓 -->
+    <select id="findByPortfolioAndAsset" resultMap="BaseResultMap">
+        SELECT *
+        FROM portfolio_positions
+        WHERE portfolio_id = #{portfolioId}
+          AND asset_id     = #{assetId}
+        LIMIT 1
+    </select>
+
+    <!-- 查询某作品集下所有持仓 -->
+    <select id="findAllByPortfolio" resultMap="BaseResultMap">
+        SELECT *
+        FROM portfolio_positions
+        WHERE portfolio_id = #{portfolioId}
+        ORDER BY market_value DESC
+    </select>
+
+    <!-- 新增持仓 -->
+    <insert id="insert" parameterType="com.vazy.finalfinance.position.entity.PortfolioPosition"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO portfolio_positions (
+            portfolio_id, asset_id, quantity, avg_cost, cost_basis,
+            market_value, unrealized_pnl, unrealized_pnl_pct,
+            portfolio_weight, last_price, price_as_of, updated_at
+        ) VALUES (
+            #{portfolioId}, #{assetId}, #{quantity}, #{avgCost}, #{costBasis},
+            #{marketValue}, #{unrealizedPnl}, #{unrealizedPnlPct},
+            #{portfolioWeight}, #{lastPrice}, #{priceAsOf}, NOW()
+        )
+    </insert>
+
+    <!-- 更新持仓（数量、均价、市值等） -->
+    <update id="update" parameterType="com.vazy.finalfinance.position.entity.PortfolioPosition">
+        UPDATE portfolio_positions
+        SET quantity           = #{quantity},
+            avg_cost           = #{avgCost},
+            cost_basis         = #{costBasis},
+            market_value       = #{marketValue},
+            unrealized_pnl     = #{unrealizedPnl},
+            unrealized_pnl_pct = #{unrealizedPnlPct},
+            portfolio_weight   = #{portfolioWeight},
+            last_price         = #{lastPrice},
+            price_as_of        = #{priceAsOf},
+            updated_at         = NOW()
+        WHERE portfolio_id = #{portfolioId}
+          AND asset_id     = #{assetId}
+    </update>
+
+    <!-- 删除某持仓 -->
+    <delete id="deleteByPortfolioAndAsset">
+        DELETE FROM portfolio_positions
+        WHERE portfolio_id = #{portfolioId}
+          AND asset_id     = #{assetId}
+    </delete>
+
+</mapper>
