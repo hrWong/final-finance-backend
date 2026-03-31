@@ -15,6 +15,7 @@ public record StockOverviewResponse(
         BigDecimal pe,
         BigDecimal eps,
         BigDecimal dividendYield,
+        String iconUrl,
         List<String> breadcrumb
 ) {
 }
