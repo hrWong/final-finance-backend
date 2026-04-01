@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { ChevronDown, ChevronRight, TrendingUp, TrendingDown, ExternalLink } from "lucide-react";
+import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
 import { formatMoney, formatPercent, toNumber } from "../lib/formatters";
 import type { AllocationItemResponse } from "../lib/types";
 import { EmptyState } from "./EmptyState";
@@ -125,7 +125,7 @@ export function PortfolioTable({ items, baseCurrency }: PortfolioTableProps) {
                   <div
                     className="h-full rounded-full transition-all duration-500"
                     style={{
-                      width: `${item.weight * 100}%`,
+                      width: `${item.weight}%`,
                       backgroundColor: item.color,
                     }}
                   ></div>

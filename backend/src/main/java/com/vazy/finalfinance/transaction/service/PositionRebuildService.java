@@ -124,7 +124,7 @@ public class PositionRebuildService {
         // 更新每个持仓的权重
         for (PortfolioPosition pos : positions) {
             BigDecimal weight = totalMarketValue.compareTo(BigDecimal.ZERO) != 0
-                    ? pos.getMarketValue().divide(totalMarketValue, 4, RoundingMode.HALF_UP)
+                    ? pos.getMarketValue().divide(totalMarketValue, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
                     : BigDecimal.ZERO;
             pos.setPortfolioWeight(weight);
             positionMapper.update(pos);

@@ -113,11 +113,11 @@ public class DashboardService {
         for (Map.Entry<String, CategoryStats> entry : statsMap.entrySet()) {
             CategoryStats stats = entry.getValue();
             BigDecimal weight = totalValue.compareTo(BigDecimal.ZERO) != 0
-                    ? stats.value.divide(totalValue, 4, RoundingMode.HALF_UP)
+                    ? stats.value.divide(totalValue, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
                     : BigDecimal.ZERO;
             
             BigDecimal gainPct = stats.invested.compareTo(BigDecimal.ZERO) != 0
-                    ? stats.gain.divide(stats.invested, 4, RoundingMode.HALF_UP)
+                    ? stats.gain.divide(stats.invested, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
                     : BigDecimal.ZERO;
 
             response.add(new AllocationItemResponse(
