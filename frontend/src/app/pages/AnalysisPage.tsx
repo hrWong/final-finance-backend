@@ -62,7 +62,7 @@ export function AnalysisPage() {
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm p-8 mt-6">
-        <AssetAllocationChart positions={positions} />
+        <AssetAllocationChart positions={positions} baseCurrency={summary?.baseCurrency} />
       </div>
     </main>
   );

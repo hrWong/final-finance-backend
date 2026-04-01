@@ -7,9 +7,10 @@ const palette = ["#6366F1", "#8B5CF6", "#22D3EE", "#A78BFA", "#60A5FA", "#34D399
 
 interface AssetAllocationChartProps {
   positions?: PositionResponse[] | null;
+  baseCurrency?: string | null;
 }
 
-export function AssetAllocationChart({ positions }: AssetAllocationChartProps) {
+export function AssetAllocationChart({ positions, baseCurrency }: AssetAllocationChartProps) {
   const totalMarketValue = (positions ?? []).reduce(
     (sum, position) => sum + (toNumber(position.marketValue) ?? 0),
     0,
@@ -37,6 +38,8 @@ export function AssetAllocationChart({ positions }: AssetAllocationChartProps) {
       />
     );
   }
+
+  const currency = baseCurrency ?? "USD";
 
   return (
     <div className="flex flex-col h-full">
@@ -85,7 +88,7 @@ export function AssetAllocationChart({ positions }: AssetAllocationChartProps) {
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
              <div className="text-gray-400 text-xs font-medium uppercase tracking-[0.1em] mb-1">总市值</div>
              <div className="text-2xl font-bold text-slate-800 tracking-tight">
-               {formatMoney(totalMarketValue, positions?.[0]?.lastPrice === null ? "USD" : undefined)} 
+               {formatMoney(totalMarketValue, currency)}
              </div>
           </div>
         </div>
@@ -114,7 +117,7 @@ export function AssetAllocationChart({ positions }: AssetAllocationChartProps) {
                     {formatPercent(item.value, { digits: 2 })}
                   </div>
                   <div className="text-[11px] font-medium text-slate-400 mt-1">
-                    {formatMoney(item.marketValue)}
+                    {formatMoney(item.marketValue, currency)}
                   </div>
                 </div>
               </div>
@@ -125,4 +128,3 @@ export function AssetAllocationChart({ positions }: AssetAllocationChartProps) {
     </div>
   );
 }
-
