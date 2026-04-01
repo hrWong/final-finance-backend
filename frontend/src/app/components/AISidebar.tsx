@@ -34,7 +34,7 @@ export function AISidebar({ onClose }: AISidebarProps) {
     {
       id: "1",
       role: "assistant",
-      content: "您好。我是您的 AI 投资顾问。我可以为您提供专业的投资组合深度分析及市场见解。请问今天有什么可以帮您的？",
+      content: "您好。我是您的 AI 投资顾问。我会基于当前投资组合快照为您做分析与建议。请问今天想先看持仓、收益，还是风险配置？",
       timestamp: new Date(),
     },
   ]);
@@ -87,29 +87,70 @@ export function AISidebar({ onClose }: AISidebarProps) {
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let accumulatedContent = "";
+      let eventBuffer = "";
 
       if (reader) {
         setIsTyping(false);
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+          const chunk = decoder.decode(value, { stream: !done });
+          eventBuffer += chunk.replace(/\r\n/g, "\n");
 
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n");
+          let eventEndIndex = eventBuffer.indexOf("\n\n");
+          while (eventEndIndex !== -1) {
+            const rawEvent = eventBuffer.slice(0, eventEndIndex);
+            eventBuffer = eventBuffer.slice(eventEndIndex + 2);
 
-          for (const line of lines) {
-            if (line.startsWith("data:")) {
-              const content = line.slice(5);
-              accumulatedContent += content;
+            const dataLines = rawEvent
+              .split("\n")
+              .filter((line) => line.startsWith("data:"));
 
-              setMessages((prev) =>
-                prev.map(msg =>
-                  msg.id === aiMessageId
-                    ? { ...msg, content: accumulatedContent }
-                    : msg
-                )
-              );
+            if (dataLines.length > 0) {
+              const content = dataLines
+                .map((line) => line.slice(5))
+                .join("\n");
+
+              if (content && content !== "[DONE]") {
+                accumulatedContent += content;
+
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === aiMessageId
+                      ? { ...msg, content: accumulatedContent }
+                      : msg
+                  )
+                );
+              }
             }
+
+            eventEndIndex = eventBuffer.indexOf("\n\n");
+          }
+
+          if (done) {
+            if (eventBuffer.trim().length > 0) {
+              const dataLines = eventBuffer
+                .split("\n")
+                .filter((line) => line.startsWith("data:"));
+
+              if (dataLines.length > 0) {
+                const content = dataLines
+                  .map((line) => line.slice(5))
+                  .join("\n");
+
+                if (content && content !== "[DONE]") {
+                  accumulatedContent += content;
+
+                  setMessages((prev) =>
+                    prev.map((msg) =>
+                      msg.id === aiMessageId
+                        ? { ...msg, content: accumulatedContent }
+                        : msg
+                    )
+                  );
+                }
+              }
+            }
+            break;
           }
         }
       }
@@ -139,7 +180,7 @@ export function AISidebar({ onClose }: AISidebarProps) {
             <h3 className="text-sm font-bold text-slate-800">AI 投资顾问</h3>
             <div className="flex items-center gap-1">
               <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-[10px] text-slate-500 font-medium">实时分析中</span>
+              <span className="text-[10px] text-slate-500 font-medium">组合快照分析中</span>
             </div>
           </div>
         </div>
@@ -188,7 +229,7 @@ export function AISidebar({ onClose }: AISidebarProps) {
                 <img src="/assets/ai_avatar.png" alt="AI" className="w-full h-full object-cover grayscale" />
               </div>
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-400 text-xs italic">
-                正在深度审视资产负债表与盈亏波动...
+                正在整理持仓、收益与配置数据...
               </div>
             </div>
           </div>
@@ -250,7 +291,7 @@ export function AISidebar({ onClose }: AISidebarProps) {
           </button>
         </form>
         <p className="mt-2 text-[10px] text-center text-slate-400 font-medium italic">
-          注意：AI 建议仅供参考，投资有风险，决策需谨慎。
+          注意：AI 建议基于当前组合快照，仅供参考，不代表实时行情。
         </p>
       </div>
     </div>
