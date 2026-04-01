@@ -1,5 +1,5 @@
 server:
-  port: 8088
+  port: 8080
 
 spring:
   application:
@@ -33,9 +33,8 @@ mybatis:
 market:
   itick:
     base-url: https://api-free.itick.org
-    token: 1dcd5e20c51a459d830af23f77861efaff2fa561c75548a491d1cf9a04335197
-    # Optional explicit proxy. If omitted, the client will try HTTPS_PROXY/http_proxy/ALL_PROXY env vars.
-    proxy-uri: http://127.0.0.1:7897
+    token: 258dd36e726a4b6ba99b77a5870a75f1f49d3515378f4c87972f7ba722b66d4f
+    proxy-uri: http://127.0.0.1:7890
     connect-timeout-millis: 5000
     response-timeout-seconds: 10
     user-agent: Mozilla/5.0
@@ -54,3 +53,18 @@ springdoc:
     path: /api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+langchain4j:
+  open-ai:
+    chat-model:
+      base-url: https://api.deepseek.com
+      api-key: sk-1537466b7caa418ea3dabcddc2d616c8
+      model-name: deepseek-chat
+      temperature: 0.3
+      timeout: 60s
+    streaming-chat-model:
+      base-url: https://api.deepseek.com
+      api-key: sk-1537466b7caa418ea3dabcddc2d616c8
+      model-name: deepseek-chat
+      temperature: 0.3
+      timeout: 60s
