@@ -57,13 +57,8 @@ export function DashboardPage() {
   return (
     <main className="max-w-[1440px] mx-auto px-8 py-6">
       {isLoading && <LoadingSpinner message="正在初始化您的仪表盘..." />}
-      
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl text-gray-900">演示作品集</h1>
-        <button className="p-2 hover:bg-gray-100 rounded-lg">
-          <MoreVertical className="w-5 h-5 text-gray-400" />
-        </button>
-      </div>
+
+
 
       <StatsCards summary={summary} onRecharge={() => setShowRechargeModal(true)} />
 

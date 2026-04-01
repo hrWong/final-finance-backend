@@ -67,11 +67,10 @@ export function StockChart({ symbol = "AAPL", currency = "USD", costPerShare, tr
             <button
               key={range.id}
               onClick={() => setSelectedRange(range.id)}
-              className={`px-3 py-1.5 text-sm rounded-lg ${
-                selectedRange === range.id
+              className={`px-3 py-1.5 text-sm rounded-lg ${selectedRange === range.id
                   ? "bg-blue-50 text-blue-600"
                   : "text-gray-600 hover:bg-gray-100"
-              }`}
+                }`}
             >
               {range.label}
             </button>
@@ -83,16 +82,15 @@ export function StockChart({ symbol = "AAPL", currency = "USD", costPerShare, tr
 
         <EmptyState
           title="暂无历史行情数据"
-          description="后端 stocks history 接口当前没有返回可用的价格序列。"
         />
       </div>
     );
   }
 
   const formattedTxs = (transactions || []).map(t => ({
-     ...t,
-     formattedDate: formatDate(t.tradeDate),
-     rawTimestamp: new Date(t.tradeDate).getTime()
+    ...t,
+    formattedDate: formatDate(t.tradeDate),
+    rawTimestamp: new Date(t.tradeDate).getTime()
   }));
 
   const baseHistory = history.map((point) => ({
@@ -170,11 +168,10 @@ export function StockChart({ symbol = "AAPL", currency = "USD", costPerShare, tr
             <button
               key={range.id}
               onClick={() => setSelectedRange(range.id)}
-              className={`px-3 py-1.5 text-sm rounded-lg ${
-                selectedRange === range.id
+              className={`px-3 py-1.5 text-sm rounded-lg ${selectedRange === range.id
                   ? "bg-blue-50 text-blue-600"
                   : "text-gray-600 hover:bg-gray-100"
-              }`}
+                }`}
             >
               {range.label}
             </button>
