@@ -9,6 +9,7 @@ import { TransactionsTable } from "../components/TransactionsTable";
 import { AboutCompany } from "../components/AboutCompany";
 import { BuyModal } from "../components/BuyModal";
 import { SellModal } from "../components/SellModal";
+import { LoadingSpinner } from "../components/LoadingSpinner";
 import { getAsset, getPortfolio, getStockOverview, getStockPosition, getStockTransactions, getDashboardSummary } from "../lib/api";
 import { formatMoney, formatPercent } from "../lib/formatters";
 import { getInstrumentIcon } from "../lib/instruments";
@@ -30,25 +31,33 @@ export function StockDetailPage() {
   const [transactions, setTransactions] = useState<TransactionResponse[] | null>(null);
   const [portfolio, setPortfolio] = useState<CurrentPortfolioResponse | null>(null);
   const [summary, setSummary] = useState<DashboardSummaryResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [showSellModal, setShowSellModal] = useState(false);
 
   const loadStockPage = useCallback(async () => {
-    const [overviewData, assetData, positionData, transactionData, portfolioData, summaryData] = await Promise.all([
-      getStockOverview(normalizedSymbol),
-      getAsset(normalizedSymbol),
-      getStockPosition(normalizedSymbol),
-      getStockTransactions(normalizedSymbol),
-      getPortfolio(),
-      getDashboardSummary(),
-    ]);
+    setIsLoading(true);
+    try {
+      const [overviewData, assetData, positionData, transactionData, portfolioData, summaryData] = await Promise.all([
+        getStockOverview(normalizedSymbol),
+        getAsset(normalizedSymbol),
+        getStockPosition(normalizedSymbol),
+        getStockTransactions(normalizedSymbol),
+        getPortfolio(),
+        getDashboardSummary(),
+      ]);
 
-    setOverview(overviewData);
-    setAsset(assetData);
-    setPosition(positionData);
-    setTransactions(transactionData);
-    setPortfolio(portfolioData);
-    setSummary(summaryData);
+      setOverview(overviewData);
+      setAsset(assetData);
+      setPosition(positionData);
+      setTransactions(transactionData);
+      setPortfolio(portfolioData);
+      setSummary(summaryData);
+    } catch (error) {
+      console.error("Failed to load stock detail page data:", error);
+    } finally {
+      setIsLoading(false);
+    }
   }, [normalizedSymbol]);
 
   useEffect(() => {
@@ -73,6 +82,8 @@ export function StockDetailPage() {
 
   return (
     <div className="min-h-screen bg-[#f8f9fa]">
+      {isLoading && <LoadingSpinner message={`正在调取 ${normalizedSymbol} 的行情数据...`} />}
+      
       <main className="max-w-[1400px] mx-auto px-8 py-6">
         <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
           {breadcrumb.map((item, index) => (

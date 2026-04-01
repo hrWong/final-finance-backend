@@ -5,6 +5,7 @@ import { PortfolioChart } from "../components/PortfolioChart";
 import { PortfolioTable } from "../components/PortfolioTable";
 import { MarketMovers } from "../components/MarketMovers";
 import { RechargeModal } from "../components/RechargeModal";
+import { LoadingSpinner } from "../components/LoadingSpinner";
 import { getDashboardAllocation, getDashboardSummary, getMarketMovers } from "../lib/api";
 import type { AllocationItemResponse, DashboardSummaryResponse, MarketMoverResponse } from "../lib/types";
 
@@ -12,6 +13,7 @@ export function DashboardPage() {
   const [summary, setSummary] = useState<DashboardSummaryResponse | null>(null);
   const [allocation, setAllocation] = useState<AllocationItemResponse[] | null>(null);
   const [movers, setMovers] = useState<MarketMoverResponse[] | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [showRechargeModal, setShowRechargeModal] = useState(false);
 
   const fetchSummary = async () => {
@@ -23,19 +25,26 @@ export function DashboardPage() {
     let cancelled = false;
 
     async function loadDashboard() {
-      const [summaryData, allocationData, moversData] = await Promise.all([
-        getDashboardSummary(),
-        getDashboardAllocation(),
-        getMarketMovers(8),
-      ]);
+      setIsLoading(true);
+      try {
+        const [summaryData, allocationData, moversData] = await Promise.all([
+          getDashboardSummary(),
+          getDashboardAllocation(),
+          getMarketMovers(8),
+        ]);
 
-      if (cancelled) {
-        return;
+        if (cancelled) return;
+
+        setSummary(summaryData);
+        setAllocation(allocationData);
+        setMovers(moversData);
+      } catch (error) {
+        console.error("Failed to load dashboard data:", error);
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
-
-      setSummary(summaryData);
-      setAllocation(allocationData);
-      setMovers(moversData);
     }
 
     loadDashboard();
@@ -47,6 +56,8 @@ export function DashboardPage() {
 
   return (
     <main className="max-w-[1440px] mx-auto px-8 py-6">
+      {isLoading && <LoadingSpinner message="正在初始化您的仪表盘..." />}
+      
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl text-gray-900">演示作品集</h1>
         <button className="p-2 hover:bg-gray-100 rounded-lg">

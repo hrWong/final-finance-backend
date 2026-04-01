@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router";
-import { Search, Bell, Settings, TrendingUp, TrendingDown } from "lucide-react";
+import { useNavigate } from "react-router";
+import { Search, TrendingUp, TrendingDown } from "lucide-react";
 import { BuyModal } from "../components/BuyModal";
 import { InstrumentIcon } from "../components/InstrumentIcon";
+import { LoadingSpinner } from "../components/LoadingSpinner";
 import { searchAssets } from "../lib/api";
 import { formatMoney, formatPercent } from "../lib/formatters";
 import { getInstrumentIcon } from "../lib/instruments";
@@ -159,9 +160,11 @@ export function AddHoldingPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden min-h-[300px] flex flex-col">
           {loading ? (
-            <div className="py-12 text-center text-sm text-gray-500">正在从后端搜索资产...</div>
+            <div className="flex-1 flex items-center justify-center py-12">
+              <LoadingSpinner fullPage={false} message="正在搜索资产..." />
+            </div>
           ) : results.length ? (
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
