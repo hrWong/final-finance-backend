@@ -71,7 +71,7 @@ export function MarketMovers({ movers }: MarketMoversProps) {
       <div className="bg-white rounded-2xl shadow-sm p-6">
         <div className="flex items-center gap-2 mb-6">
           <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-          <h3 className="text-lg text-gray-900">当日跌幅最大的几家</h3>
+          <h3 className="text-lg text-gray-900">当日跌幅最大的股票</h3>
         </div>
 
         {losers.length ? (
