@@ -23,7 +23,6 @@ export function PortfolioChart({ items, baseCurrency }: PortfolioChartProps) {
     return (
       <EmptyState
         title="暂无资产分布数据"
-        description="后端还没有返回 dashboard allocation 数据。"
       />
     );
   }
@@ -52,20 +51,25 @@ export function PortfolioChart({ items, baseCurrency }: PortfolioChartProps) {
           <Tooltip
             formatter={(value: number) => formatMoney(value, currency)}
             contentStyle={{
-              backgroundColor: "#1f2937",
-              border: "none",
-              borderRadius: "8px",
-              color: "white",
-              padding: "8px 12px",
+              backgroundColor: "rgba(255, 255, 255, 0.95)",
+              backdropFilter: "blur(8px)",
+              border: "1px solid #e5e7eb",
+              borderRadius: "12px",
+              color: "#6b7280",
+              padding: "10px 16px",
+              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+              fontWeight: 500,
+              fontSize: "14px"
             }}
+            itemStyle={{ color: "#111827", fontWeight: 600 }}
           />
         </PieChart>
       </ResponsiveContainer>
 
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-        <div className="bg-gray-900/95 text-white px-4 py-3 rounded-xl text-sm shadow-lg text-center min-w-[150px]">
-          <div className="text-xs text-gray-300 mb-1">Total</div>
-          <div className="font-medium">{formatMoney(total, currency)}</div>
+        <div className="bg-white/90 backdrop-blur-md text-gray-800 px-4 py-2.5 rounded-2xl text-sm shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-gray-100 text-center min-w-[130px]">
+          <div className="text-[10px] text-gray-400 mb-0.5 uppercase tracking-[0.1em] font-bold">Total</div>
+          <div className="font-bold text-base text-gray-900 leading-tight">{formatMoney(total, currency)}</div>
         </div>
       </div>
 

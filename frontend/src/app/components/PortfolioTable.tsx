@@ -44,7 +44,7 @@ export function PortfolioTable({ items, baseCurrency }: PortfolioTableProps) {
     return (
       <EmptyState
         title="暂无资产明细"
-        description="您的作品集中还没有任何资产记录。"
+
       />
     );
   }
@@ -70,7 +70,7 @@ export function PortfolioTable({ items, baseCurrency }: PortfolioTableProps) {
       <div className="space-y-4">
         {rows.map((item, index) => (
           <div key={index} className="border border-transparent hover:border-gray-100 rounded-2xl transition-all">
-            <div 
+            <div
               className={`grid grid-cols-4 gap-4 items-center p-3 cursor-pointer rounded-2xl transition-colors ${expandedCategory === item.name ? 'bg-blue-50/30' : 'hover:bg-gray-50/50'}`}
               onClick={() => toggleCategory(item.name)}
             >
@@ -154,7 +154,7 @@ export function PortfolioTable({ items, baseCurrency }: PortfolioTableProps) {
                             <td className="px-4 py-3 text-sm text-gray-600 truncate max-w-[150px]">{pos.assetName}</td>
                             <td className="px-4 py-3 text-sm font-mono text-gray-900 text-right">{formatMoney(pos.marketValue || 0, currency)}</td>
                             <td className="px-4 py-3 text-center">
-                              <Link 
+                              <Link
                                 to={`/stock/${pos.symbol}`}
                                 className="p-1.5 hover:bg-blue-100 rounded-lg inline-flex text-blue-500 transition-colors"
                               >

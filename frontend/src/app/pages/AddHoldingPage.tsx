@@ -255,9 +255,6 @@ export function AddHoldingPage() {
             <div className="p-8">
               <EmptyState
                 title={searchTouched ? "没有搜索到可用资产" : "暂无可展示资产"}
-                description={searchTouched
-                  ? "后端已经接到真实资产搜索；如果这里为空，通常是当前关键字没有匹配到结果。"
-                  : "页面现在会优先展示后端返回的默认资产列表；如果为空，说明当前数据源没有返回可用标的。"}
               />
             </div>
           )}

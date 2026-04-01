@@ -9,6 +9,7 @@ import com.vazy.finalfinance.portfolio.mapper.PortfolioMapper;
 import com.vazy.finalfinance.position.entity.PortfolioPosition;
 import com.vazy.finalfinance.position.mapper.PortfolioPositionMapper;
 import com.vazy.finalfinance.position.vo.PositionResponse;
+import com.vazy.finalfinance.transaction.mapper.TransactionMapper;
 import com.vazy.finalfinance.wallet.entity.WalletAccount;
 import com.vazy.finalfinance.wallet.mapper.WalletMapper;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ public class DashboardService {
     private final PortfolioMapper portfolioMapper;
     private final AssetMapper assetMapper;
     private final WalletMapper walletMapper;
+    private final TransactionMapper transactionMapper;
 
     public DashboardSummaryResponse getSummary() {
         WalletAccount account = walletMapper.getWalletByUserId("default_user");
@@ -44,6 +46,7 @@ public class DashboardService {
             return new DashboardSummaryResponse(
                     BigDecimal.ZERO, BigDecimal.ZERO,
                     BigDecimal.ZERO, BigDecimal.ZERO,
+                    BigDecimal.ZERO,
                     null, null,
                     cash, baseCurrency
             );
@@ -63,11 +66,15 @@ public class DashboardService {
                 ? totalPnl.divide(investedAmount, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
                 : BigDecimal.ZERO;
 
+        BigDecimal netCashFlow = transactionMapper.calculateNetCashFlow(DEFAULT_PORTFOLIO_ID);
+        BigDecimal cumulativePnl = totalValue.add(netCashFlow != null ? netCashFlow : BigDecimal.ZERO);
+
         return new DashboardSummaryResponse(
                 totalValue,
                 investedAmount,
                 totalPnl,
                 totalPnlPct,
+                cumulativePnl,
                 null,
                 null,
                 cash,

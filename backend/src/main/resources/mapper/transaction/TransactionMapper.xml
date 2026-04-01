@@ -57,6 +57,13 @@
         ORDER BY trade_date ASC, id ASC
     </select>
 
+    <!-- 聚合统计该作品集下的资金净流水（卖出收回 - 买入开销） -->
+    <select id="calculateNetCashFlow" parameterType="long" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(CASE WHEN type = 'SELL' THEN net_amount WHEN type = 'BUY' THEN -net_amount ELSE 0 END), 0)
+        FROM transactions
+        WHERE portfolio_id = #{portfolioId}
+    </select>
+
     <!-- 新增交易记录 -->
     <insert id="insert" parameterType="com.vazy.finalfinance.transaction.entity.Transaction"
             useGeneratedKeys="true" keyProperty="id">

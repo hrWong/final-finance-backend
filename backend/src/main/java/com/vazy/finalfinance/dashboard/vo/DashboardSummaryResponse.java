@@ -7,6 +7,7 @@ public record DashboardSummaryResponse(
         BigDecimal investedAmount,
         BigDecimal totalPnl,
         BigDecimal totalPnlPct,
+        BigDecimal cumulativePnl,
         BigDecimal dailyPnl,
         BigDecimal dailyPnlPct,
         BigDecimal cash,

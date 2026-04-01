@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router";
-import { Star, Plus, Share2, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { StockChart } from "../components/StockChart";
 import { InstrumentIcon } from "../components/InstrumentIcon";
 import { StockSidebar } from "../components/StockSidebar";
@@ -109,15 +109,6 @@ export function StockDetailPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button className="p-2 hover:bg-gray-100 rounded-lg">
-                <Star className="w-5 h-5 text-gray-600" />
-              </button>
-              <button className="p-2 hover:bg-gray-100 rounded-lg">
-                <Plus className="w-5 h-5 text-gray-600" />
-              </button>
-              <button className="p-2 hover:bg-gray-100 rounded-lg">
-                <Share2 className="w-5 h-5 text-gray-600" />
-              </button>
             </div>
           </div>
 

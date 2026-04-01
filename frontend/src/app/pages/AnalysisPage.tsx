@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { ChevronRight } from "lucide-react";
-import { SecondaryNav } from "../components/SecondaryNav";
 import { AnalysisStatsCards } from "../components/AnalysisStatsCards";
 import { HoldingsTable } from "../components/HoldingsTable";
 import { AssetAllocationChart } from "../components/AssetAllocationChart";
@@ -40,8 +39,6 @@ export function AnalysisPage() {
 
   return (
     <main className="max-w-[1440px] mx-auto px-8 py-6">
-      <SecondaryNav />
-
       <AnalysisStatsCards summary={summary} />
 
       <div className="mt-6 flex items-center gap-2 text-gray-600">

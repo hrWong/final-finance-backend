@@ -1,4 +1,4 @@
-import { Plus, Search, User } from "lucide-react";
+import { Plus } from "lucide-react";
 import { NavLink, Link } from "react-router";
 
 export function Header() {
@@ -39,12 +39,6 @@ export function Header() {
               <Plus className="w-4 h-4" />
               添加
             </Link>
-            <button className="p-2 hover:bg-gray-100 rounded-lg">
-              <Search className="w-5 h-5 text-gray-600" />
-            </button>
-            <button className="p-2 hover:bg-gray-100 rounded-lg">
-              <User className="w-5 h-5 text-gray-600" />
-            </button>
           </div>
         </div>
       </div>

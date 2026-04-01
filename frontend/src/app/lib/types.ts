@@ -10,6 +10,7 @@ export interface DashboardSummaryResponse {
   investedAmount: number | null;
   totalPnl: number | null;
   totalPnlPct: number | null;
+  cumulativePnl: number | null;
   dailyPnl: number | null;
   dailyPnlPct: number | null;
   cash: number | null;
