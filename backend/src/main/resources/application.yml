@@ -58,13 +58,13 @@ langchain4j:
   open-ai:
     chat-model:
       base-url: https://api.deepseek.com
-      api-key: sk-1537466b7caa418ea3dabcddc2d616c8
+      api-key: 
       model-name: deepseek-chat
       temperature: 0.3
       timeout: 60s
     streaming-chat-model:
       base-url: https://api.deepseek.com
-      api-key: sk-1537466b7caa418ea3dabcddc2d616c8
+      api-key: 
       model-name: deepseek-chat
       temperature: 0.3
       timeout: 60s
