@@ -23,6 +23,7 @@ backend/src/main/resources/application-local.yml
 # Database dumps/backups
 backups/
 *.sql
+!backend/src/main/resources/db/migration/*.sql
 !backups/
 backups/*
 !backups/final_finance_20260330.sql

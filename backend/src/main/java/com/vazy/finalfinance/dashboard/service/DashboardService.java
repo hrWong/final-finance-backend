@@ -44,7 +44,7 @@ public class DashboardService {
             return new DashboardSummaryResponse(
                     BigDecimal.ZERO, BigDecimal.ZERO,
                     BigDecimal.ZERO, BigDecimal.ZERO,
-                    BigDecimal.ZERO, BigDecimal.ZERO,
+                    null, null,
                     cash, baseCurrency
             );
         }
@@ -64,12 +64,12 @@ public class DashboardService {
                 : BigDecimal.ZERO;
 
         return new DashboardSummaryResponse(
-                totalValue.add(cash),
-                investedAmount.add(cash),
+                totalValue,
+                investedAmount,
                 totalPnl,
                 totalPnlPct,
-                BigDecimal.ZERO,
-                BigDecimal.ZERO,
+                null,
+                null,
                 cash,
                 baseCurrency
         );

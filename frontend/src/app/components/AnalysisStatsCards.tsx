@@ -10,6 +10,8 @@ export function AnalysisStatsCards({ summary }: AnalysisStatsCardsProps) {
   const baseCurrency = summary?.baseCurrency ?? "CNY";
   const totalPnlPositive = Number(summary?.totalPnl ?? 0) >= 0;
   const dailyPnlPositive = Number(summary?.dailyPnl ?? 0) >= 0;
+  const hasDailyPnl = summary?.dailyPnl !== null && summary?.dailyPnl !== undefined
+    && summary?.dailyPnlPct !== null && summary?.dailyPnlPct !== undefined;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -43,16 +45,22 @@ export function AnalysisStatsCards({ summary }: AnalysisStatsCardsProps) {
             {formatPercent(summary?.totalPnlPct, { digits: 2, signed: true })}
           </span>
         </div>
-        <div className="text-sm flex items-center gap-2">
-          <span className={dailyPnlPositive ? "text-emerald-500" : "text-red-500"}>
-            {formatMoney(summary?.dailyPnl, baseCurrency, { signed: true })}
-          </span>
-          <span className={`flex items-center gap-1 ${dailyPnlPositive ? "text-emerald-500" : "text-red-500"}`}>
-            {dailyPnlPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-            {formatPercent(summary?.dailyPnlPct, { digits: 2, signed: true })}
-          </span>
-          <span className="text-gray-500">今日</span>
-        </div>
+        {hasDailyPnl ? (
+          <div className="text-sm flex items-center gap-2">
+            <span className={dailyPnlPositive ? "text-emerald-500" : "text-red-500"}>
+              {formatMoney(summary?.dailyPnl, baseCurrency, { signed: true })}
+            </span>
+            <span className={`flex items-center gap-1 ${dailyPnlPositive ? "text-emerald-500" : "text-red-500"}`}>
+              {dailyPnlPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+              {formatPercent(summary?.dailyPnlPct, { digits: 2, signed: true })}
+            </span>
+            <span className="text-gray-500">今日</span>
+          </div>
+        ) : (
+          <div className="text-sm text-gray-500">
+            收益与估值按昨日收盘价口径计算
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm p-6">

@@ -5,6 +5,7 @@ import com.vazy.finalfinance.asset.mapper.AssetMapper;
 import com.vazy.finalfinance.asset.service.AssetService;
 import com.vazy.finalfinance.position.entity.PortfolioPosition;
 import com.vazy.finalfinance.position.mapper.PortfolioPositionMapper;
+import com.vazy.finalfinance.position.service.PortfolioPricingService;
 import com.vazy.finalfinance.transaction.dto.CreateTransactionRequest;
 import com.vazy.finalfinance.transaction.dto.UpdateTransactionRequest;
 import com.vazy.finalfinance.transaction.entity.Transaction;
@@ -30,6 +31,7 @@ public class TransactionService {
     private final AssetMapper assetMapper;
     private final AssetService assetService;
     private final PortfolioPositionMapper positionMapper;
+    private final PortfolioPricingService portfolioPricingService;
     private final PositionRebuildService positionRebuildService;
     private final WalletService walletService;
 
@@ -95,7 +97,7 @@ public class TransactionService {
 
         // 4. 重建持仓
         positionRebuildService.rebuildPosition(DEFAULT_PORTFOLIO_ID, asset.getId());
-        positionRebuildService.rebuildPortfolioSummary(DEFAULT_PORTFOLIO_ID);
+        portfolioPricingService.refreshCurrentAssetPreviousClose(asset.getId());
 
         return toResponse(tx, request.symbol(), asset.getName());
     }
@@ -132,7 +134,7 @@ public class TransactionService {
 
         // 重建持仓
         positionRebuildService.rebuildPosition(DEFAULT_PORTFOLIO_ID, oldTx.getAssetId());
-        positionRebuildService.rebuildPortfolioSummary(DEFAULT_PORTFOLIO_ID);
+        portfolioPricingService.refreshCurrentAssetPreviousClose(oldTx.getAssetId());
 
         return toResponse(oldTx);
     }

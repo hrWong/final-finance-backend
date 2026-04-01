@@ -8,7 +8,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -29,5 +31,9 @@ public class MarketDataService {
     @Cacheable(cacheNames = "movers", key = "#limit")
     public List<MarketMoverResponse> getMovers(int limit) {
         return itickFinanceClient.getMovers(limit);
+    }
+
+    public Map<String, BigDecimal> getPreviousCloses(List<String> symbols) {
+        return itickFinanceClient.getPreviousCloses(symbols);
     }
 }

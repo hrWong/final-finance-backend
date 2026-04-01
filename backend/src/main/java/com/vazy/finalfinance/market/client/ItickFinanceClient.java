@@ -44,8 +44,10 @@ public class ItickFinanceClient {
     private static final int DEFAULT_MOVER_UNIVERSE_SIZE = 40;
     private static final int SEARCH_QUOTE_BATCH_SIZE = 2;
     private static final int MOVER_QUOTE_BATCH_SIZE = 2;
+    private static final int PORTFOLIO_QUOTE_BATCH_SIZE = 2;
     private static final long SEARCH_REQUEST_DELAY_MILLIS = 0L;
     private static final long MOVER_REQUEST_DELAY_MILLIS = 250L;
+    private static final long PORTFOLIO_REQUEST_DELAY_MILLIS = 100L;
 
     private final WebClient itickWebClient;
     private final Map<String, List<CatalogEntry>> catalogCache = new ConcurrentHashMap<>();
@@ -243,6 +245,47 @@ public class ItickFinanceClient {
         movers.addAll(gainers);
         movers.addAll(losers);
         return movers;
+    }
+
+    public Map<String, BigDecimal> getPreviousCloses(List<String> symbols) {
+        if (symbols == null || symbols.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, List<ResolvedSymbol>> resolvedByRegion = symbols.stream()
+                .filter(Objects::nonNull)
+                .map(this::resolveSymbol)
+                .collect(Collectors.groupingBy(
+                        ResolvedSymbol::region,
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
+
+        Map<String, BigDecimal> previousCloses = new LinkedHashMap<>();
+        for (Map.Entry<String, List<ResolvedSymbol>> entry : resolvedByRegion.entrySet()) {
+            List<ResolvedSymbol> resolvedSymbols = entry.getValue();
+            List<List<ResolvedSymbol>> chunks = new ArrayList<>();
+            for (int index = 0; index < resolvedSymbols.size(); index += PORTFOLIO_QUOTE_BATCH_SIZE) {
+                chunks.add(resolvedSymbols.subList(
+                        index,
+                        Math.min(index + PORTFOLIO_QUOTE_BATCH_SIZE, resolvedSymbols.size())
+                ));
+            }
+
+            for (List<ResolvedSymbol> chunk : chunks) {
+                try {
+                    for (BatchQuote quote : fetchResolvedQuoteChunk(entry.getKey(), chunk)) {
+                        if (quote.previousClose() != null) {
+                            previousCloses.put(quote.symbol(), quote.previousClose());
+                        }
+                    }
+                } catch (BusinessException exception) {
+                    log.warn("Skipping iTick portfolio quote chunk {} after provider error: {}", chunk, exception.getMessage());
+                }
+                sleepQuietly(PORTFOLIO_REQUEST_DELAY_MILLIS);
+            }
+        }
+        return previousCloses;
     }
 
     private JsonNode requestData(
@@ -501,6 +544,35 @@ public class ItickFinanceClient {
             quotes.add(new BatchQuote(
                     normalizeSymbol(text(quoteNode, "s")),
                     decimal(quoteNode, "ld"),
+                    decimal(quoteNode, "p"),
+                    decimal(quoteNode, "ch"),
+                    decimal(quoteNode, "chp")
+            ));
+        }
+        return quotes;
+    }
+
+    private List<BatchQuote> fetchResolvedQuoteChunk(String region, List<ResolvedSymbol> symbols) {
+        List<String> codes = symbols.stream().map(ResolvedSymbol::code).toList();
+        JsonNode data = requestData("batch quotes " + String.join(",", codes), uriBuilder -> uriBuilder
+                .path("/stock/quotes")
+                .queryParam("region", region)
+                .queryParam("codes", String.join(",", codes))
+                .build());
+
+        List<BatchQuote> quotes = new ArrayList<>();
+        for (ResolvedSymbol symbol : symbols) {
+            JsonNode quoteNode = data.path(symbol.code());
+            if (quoteNode.isMissingNode() || quoteNode.isNull()) {
+                quoteNode = data.path(symbol.displaySymbol());
+            }
+            if (quoteNode.isMissingNode() || quoteNode.isNull()) {
+                continue;
+            }
+            quotes.add(new BatchQuote(
+                    symbol.displaySymbol(),
+                    decimal(quoteNode, "ld"),
+                    decimal(quoteNode, "p"),
                     decimal(quoteNode, "ch"),
                     decimal(quoteNode, "chp")
             ));
@@ -686,6 +758,7 @@ public class ItickFinanceClient {
     private record BatchQuote(
             String symbol,
             BigDecimal lastPrice,
+            BigDecimal previousClose,
             BigDecimal changeAmount,
             BigDecimal changePercent
     ) {
