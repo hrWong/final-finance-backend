@@ -17,7 +17,6 @@ export function HoldingsTable({ positions, baseCurrency }: HoldingsTableProps) {
     return (
       <EmptyState
         title="暂无持仓数据"
-        description="后端 positions 接口当前没有返回持仓列表。"
       />
     );
   }

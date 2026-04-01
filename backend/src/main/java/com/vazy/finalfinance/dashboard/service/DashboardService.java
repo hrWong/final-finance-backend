@@ -162,6 +162,7 @@ public class DashboardService {
                 pos.getAvgCost(),
                 pos.getCostBasis(),
                 pos.getLastPrice(),
+                pos.getPreviousClose(),
                 pos.getMarketValue(),
                 pos.getUnrealizedPnl(),
                 pos.getUnrealizedPnlPct(),

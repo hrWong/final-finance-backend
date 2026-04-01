@@ -36,4 +36,16 @@ public class MarketDataService {
     public Map<String, BigDecimal> getPreviousCloses(List<String> symbols) {
         return itickFinanceClient.getPreviousCloses(symbols);
     }
+
+    /**
+     * 批量获取资产的价格快照（包含当前价和昨日收盘价）
+     */
+    public Map<String, com.vazy.finalfinance.position.service.PortfolioPricingService.PriceSnapshot> fetchBatchSnapshots(List<String> symbols) {
+        if (symbols == null || symbols.isEmpty()) {
+            return java.util.Map.of();
+        }
+
+        // 我们直接调用 itickClient 的批量报价逻辑并转换
+        return itickFinanceClient.getPreviousClosesExtended(symbols);
+    }
 }

@@ -288,6 +288,51 @@ public class ItickFinanceClient {
         return previousCloses;
     }
 
+    /**
+     * 扩展版批量获取，返回包含实时价和昨收价的快照
+     */
+    public Map<String, com.vazy.finalfinance.position.service.PortfolioPricingService.PriceSnapshot> getPreviousClosesExtended(List<String> symbols) {
+        if (symbols == null || symbols.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, List<ResolvedSymbol>> resolvedByRegion = symbols.stream()
+                .filter(Objects::nonNull)
+                .map(this::resolveSymbol)
+                .collect(Collectors.groupingBy(
+                        ResolvedSymbol::region,
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
+
+        Map<String, com.vazy.finalfinance.position.service.PortfolioPricingService.PriceSnapshot> snapshots = new LinkedHashMap<>();
+        for (Map.Entry<String, List<ResolvedSymbol>> entry : resolvedByRegion.entrySet()) {
+            List<ResolvedSymbol> resolvedSymbols = entry.getValue();
+            List<List<ResolvedSymbol>> chunks = new ArrayList<>();
+            for (int index = 0; index < resolvedSymbols.size(); index += PORTFOLIO_QUOTE_BATCH_SIZE) {
+                chunks.add(resolvedSymbols.subList(
+                        index,
+                        Math.min(index + PORTFOLIO_QUOTE_BATCH_SIZE, resolvedSymbols.size())
+                ));
+            }
+
+            for (List<ResolvedSymbol> chunk : chunks) {
+                try {
+                    for (BatchQuote quote : fetchResolvedQuoteChunk(entry.getKey(), chunk)) {
+                        snapshots.put(quote.symbol(), new com.vazy.finalfinance.position.service.PortfolioPricingService.PriceSnapshot(
+                                quote.lastPrice(),
+                                quote.previousClose()
+                        ));
+                    }
+                } catch (BusinessException exception) {
+                    log.warn("Skipping iTick portfolio quote chunk {} after provider error: {}", chunk, exception.getMessage());
+                }
+                sleepQuietly(PORTFOLIO_REQUEST_DELAY_MILLIS);
+            }
+        }
+        return snapshots;
+    }
+
     private JsonNode requestData(
             String requestLabel,
             Function<org.springframework.web.util.UriBuilder, java.net.URI> uriBuilder

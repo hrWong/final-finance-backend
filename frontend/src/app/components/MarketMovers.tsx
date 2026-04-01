@@ -64,7 +64,6 @@ export function MarketMovers({ movers }: MarketMoversProps) {
         ) : (
           <EmptyState
             title="暂无涨幅榜数据"
-            description="后端 market movers 接口当前没有返回上涨标的。"
           />
         )}
       </div>
@@ -113,7 +112,6 @@ export function MarketMovers({ movers }: MarketMoversProps) {
         ) : (
           <EmptyState
             title="暂无跌幅榜数据"
-            description="后端 market movers 接口当前没有返回下跌标的。"
           />
         )}
       </div>

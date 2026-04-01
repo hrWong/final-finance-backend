@@ -18,6 +18,7 @@ public class PortfolioPosition {
     private BigDecimal unrealizedPnlPct;
     private BigDecimal portfolioWeight;
     private BigDecimal lastPrice;
+    private BigDecimal previousClose;
     private LocalDateTime priceAsOf;
     private LocalDateTime updatedAt;
 }

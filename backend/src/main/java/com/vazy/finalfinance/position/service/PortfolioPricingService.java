@@ -2,7 +2,6 @@ package com.vazy.finalfinance.position.service;
 
 import com.vazy.finalfinance.asset.entity.Asset;
 import com.vazy.finalfinance.asset.mapper.AssetMapper;
-import com.vazy.finalfinance.market.dto.MarketHistoryPoint;
 import com.vazy.finalfinance.market.service.MarketDataService;
 import com.vazy.finalfinance.position.entity.PortfolioPosition;
 import com.vazy.finalfinance.position.mapper.PortfolioPositionMapper;
@@ -16,9 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.time.LocalTime;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
@@ -33,25 +30,31 @@ public class PortfolioPricingService {
 
     private static final long DEFAULT_PORTFOLIO_ID = 1L;
     private static final ZoneId DEFAULT_MARKET_ZONE = ZoneId.of("America/New_York");
-    private static final LocalTime DEFAULT_MARKET_CLOSE_TIME = LocalTime.of(16, 0);
 
     private final PortfolioPositionMapper positionMapper;
     private final AssetMapper assetMapper;
     private final MarketDataService marketDataService;
     private final PositionRebuildService positionRebuildService;
 
+    public record PriceSnapshot(BigDecimal lastPrice, BigDecimal previousClose) {
+    }
+
+    /**
+     * 定时刷新作品集内所有资产的定价快照
+     * 此任务现在会同时获取实时价和昨收价
+     */
     @Scheduled(cron = "${portfolio.pricing.refresh-cron:0 15 8 * * MON-FRI}", zone = "${portfolio.pricing.time-zone:America/New_York}")
-    public void refreshCurrentPortfolioPreviousClosePrices() {
-        refreshPortfolioPreviousClosePrices(DEFAULT_PORTFOLIO_ID);
+    public void refreshCurrentPortfolioPrices() {
+        refreshPortfolioPrices(DEFAULT_PORTFOLIO_ID);
     }
 
     @EventListener(ApplicationReadyEvent.class)
-    public void refreshCurrentPortfolioPreviousClosePricesOnStartup() {
-        log.info("Refreshing previous-close pricing snapshot on application startup");
-        refreshCurrentPortfolioPreviousClosePrices();
+    public void refreshCurrentPortfolioPricesOnStartup() {
+        log.info("Refreshing pricing snapshot on application startup");
+        refreshCurrentPortfolioPrices();
     }
 
-    public void refreshPortfolioPreviousClosePrices(Long portfolioId) {
+    public void refreshPortfolioPrices(Long portfolioId) {
         List<PortfolioPosition> positions = positionMapper.findAllByPortfolio(portfolioId);
         if (positions == null || positions.isEmpty()) {
             return;
@@ -71,10 +74,11 @@ public class PortfolioPricingService {
             return;
         }
 
-        Map<String, BigDecimal> previousCloses = resolvePricingSnapshot(
+        Map<String, PriceSnapshot> snapshots = resolvePricingSnapshots(
                 assetsById.values().stream().map(Asset::getSymbol).toList()
         );
-        if (previousCloses.isEmpty()) {
+
+        if (snapshots.isEmpty()) {
             return;
         }
 
@@ -84,8 +88,8 @@ public class PortfolioPricingService {
             if (asset == null) {
                 continue;
             }
-            BigDecimal previousClose = previousCloses.get(asset.getSymbol());
-            if (applyPreviousClose(position, asset, previousClose)) {
+            PriceSnapshot snapshot = snapshots.get(asset.getSymbol());
+            if (applyPrices(position, asset, snapshot)) {
                 updated = true;
             }
         }
@@ -95,12 +99,12 @@ public class PortfolioPricingService {
         }
     }
 
-    public void refreshCurrentAssetPreviousClose(Long assetId) {
-        refreshAssetPreviousClose(DEFAULT_PORTFOLIO_ID, assetId);
+    public void refreshCurrentAssetPrice(Long assetId) {
+        refreshAssetPrice(DEFAULT_PORTFOLIO_ID, assetId);
         positionRebuildService.rebuildPortfolioSummary(DEFAULT_PORTFOLIO_ID);
     }
 
-    public boolean refreshAssetPreviousClose(Long portfolioId, Long assetId) {
+    public boolean refreshAssetPrice(Long portfolioId, Long assetId) {
         if (assetId == null) {
             return false;
         }
@@ -118,97 +122,62 @@ public class PortfolioPricingService {
             return false;
         }
 
-        BigDecimal previousClose = resolvePricingSnapshot(List.of(asset.getSymbol()))
+        PriceSnapshot snapshot = resolvePricingSnapshots(List.of(asset.getSymbol()))
                 .get(asset.getSymbol());
-        if (previousClose == null) {
+        if (snapshot == null) {
             return false;
         }
 
-        return applyPreviousClose(position, asset, previousClose);
+        return applyPrices(position, asset, snapshot);
     }
 
-    private boolean applyPreviousClose(PortfolioPosition position, Asset asset, BigDecimal previousClose) {
-        if (position == null || asset == null || previousClose == null) {
+    /**
+     * 将获取到的价格快照应用到持仓实体上并重新计算市值与盈亏
+     * 关键修改：盈亏计算现在一律基于实时价格 lastPrice
+     */
+    private boolean applyPrices(PortfolioPosition position, Asset asset, PriceSnapshot snapshot) {
+        if (position == null || asset == null || snapshot == null || snapshot.lastPrice() == null) {
             return false;
         }
 
+        BigDecimal lastPrice = snapshot.lastPrice();
+        BigDecimal previousClose = snapshot.previousClose();
+
+        // 核心：基于实时价格计算市值
         BigDecimal marketValue = position.getQuantity()
-                .multiply(previousClose)
+                .multiply(lastPrice)
                 .setScale(2, RoundingMode.HALF_UP);
+        
         BigDecimal costBasis = position.getCostBasis() != null ? position.getCostBasis() : BigDecimal.ZERO;
         BigDecimal unrealizedPnl = marketValue.subtract(costBasis);
         BigDecimal unrealizedPnlPct = costBasis.compareTo(BigDecimal.ZERO) != 0
                 ? unrealizedPnl.divide(costBasis, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
                 : BigDecimal.ZERO;
 
-        position.setLastPrice(previousClose);
+        position.setLastPrice(lastPrice);                // 存储实时价
+        position.setPreviousClose(previousClose);        // 存储昨日收盘价（供详情页展示）
         position.setMarketValue(marketValue);
         position.setUnrealizedPnl(unrealizedPnl);
         position.setUnrealizedPnlPct(unrealizedPnlPct);
-        position.setPriceAsOf(resolvePreviousCloseAsOf());
+        position.setPriceAsOf(LocalDateTime.now(DEFAULT_MARKET_ZONE));
+        
         positionMapper.update(position);
 
-        log.info("Refreshed previous close for assetId={}, symbol={}, close={}, asOf={}",
-                asset.getId(), asset.getSymbol(), previousClose, position.getPriceAsOf());
+        log.info("Refreshed pricing for assetId={}, symbol={}, last={}, prevClose={}, pnl={}",
+                asset.getId(), asset.getSymbol(), lastPrice, previousClose, unrealizedPnl);
         return true;
     }
 
-    private Map<String, BigDecimal> resolvePricingSnapshot(List<String> symbols) {
-        if (shouldUseLatestClosedHistory()) {
-            return symbols.stream()
-                    .distinct()
-                    .map(this::resolveLatestClosedHistoryPrice)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toMap(
-                            SymbolClose::symbol,
-                            SymbolClose::close,
-                            (left, right) -> left,
-                            java.util.LinkedHashMap::new
-                    ));
+    private Map<String, PriceSnapshot> resolvePricingSnapshots(List<String> symbols) {
+        if (symbols == null || symbols.isEmpty()) {
+            return Map.of();
         }
-        return marketDataService.getPreviousCloses(symbols);
+
+        return marketDataService.fetchBatchSnapshots(symbols);
     }
 
-    private boolean shouldUseLatestClosedHistory() {
-        LocalDate marketDate = LocalDate.now(DEFAULT_MARKET_ZONE);
-        DayOfWeek marketDay = marketDate.getDayOfWeek();
-        if (marketDay == DayOfWeek.SATURDAY || marketDay == DayOfWeek.SUNDAY) {
-            return true;
-        }
-        LocalTime marketTime = java.time.LocalTime.now(DEFAULT_MARKET_ZONE);
-        return !marketTime.isBefore(DEFAULT_MARKET_CLOSE_TIME);
-    }
-
-    private SymbolClose resolveLatestClosedHistoryPrice(String symbol) {
-        try {
-            List<MarketHistoryPoint> history = marketDataService.getHistory(symbol, "1m", "1d");
-            if (history == null || history.isEmpty()) {
-                return null;
-            }
-            MarketHistoryPoint latestPoint = history.get(history.size() - 1);
-            if (latestPoint == null || latestPoint.close() == null) {
-                return null;
-            }
-            return new SymbolClose(symbol, latestPoint.close());
-        } catch (RuntimeException exception) {
-            log.warn("Failed to resolve latest closed history price for symbol={}", symbol, exception);
-            return null;
-        }
-    }
-
-    private LocalDate resolvePreviousCloseDate() {
-        LocalDate referenceDate = LocalDate.now(DEFAULT_MARKET_ZONE).minusDays(1);
-        while (referenceDate.getDayOfWeek() == DayOfWeek.SATURDAY
-                || referenceDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
-            referenceDate = referenceDate.minusDays(1);
-        }
-        return referenceDate;
-    }
-
-    private java.time.LocalDateTime resolvePreviousCloseAsOf() {
-        return resolvePreviousCloseDate().atTime(DEFAULT_MARKET_CLOSE_TIME);
-    }
-
-    private record SymbolClose(String symbol, BigDecimal close) {
-    }
+    @Deprecated
+    public void refreshPortfolioPreviousClosePrices(Long id) {}
+    @Deprecated
+    public void refreshCurrentAssetPreviousClose(Long id) {}
 }

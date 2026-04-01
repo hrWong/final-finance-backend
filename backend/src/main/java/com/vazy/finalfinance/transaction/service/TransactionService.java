@@ -97,7 +97,7 @@ public class TransactionService {
 
         // 4. 重建持仓
         positionRebuildService.rebuildPosition(DEFAULT_PORTFOLIO_ID, asset.getId());
-        portfolioPricingService.refreshCurrentAssetPreviousClose(asset.getId());
+        portfolioPricingService.refreshCurrentAssetPrice(asset.getId());
 
         return toResponse(tx, request.symbol(), asset.getName());
     }
@@ -134,7 +134,7 @@ public class TransactionService {
 
         // 重建持仓
         positionRebuildService.rebuildPosition(DEFAULT_PORTFOLIO_ID, oldTx.getAssetId());
-        portfolioPricingService.refreshCurrentAssetPreviousClose(oldTx.getAssetId());
+        portfolioPricingService.refreshCurrentAssetPrice(oldTx.getAssetId());
 
         return toResponse(oldTx);
     }

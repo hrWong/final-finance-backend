@@ -10,6 +10,7 @@ public record PositionResponse(
         BigDecimal avgCost,
         BigDecimal costBasis,
         BigDecimal lastPrice,
+        BigDecimal previousClose,
         BigDecimal marketValue,
         BigDecimal unrealizedPnl,
         BigDecimal unrealizedPnlPct,

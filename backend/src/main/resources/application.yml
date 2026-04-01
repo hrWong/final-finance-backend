@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 8088
 
 spring:
   application:
@@ -17,6 +17,9 @@ spring:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
+    repair-on-migrate: true
+    clean-disabled: false
+    clean-on-validation-error: true
   cache:
     cache-names:
       - quotes
@@ -34,7 +37,7 @@ market:
   itick:
     base-url: https://api-free.itick.org
     token: 258dd36e726a4b6ba99b77a5870a75f1f49d3515378f4c87972f7ba722b66d4f
-    proxy-uri: http://127.0.0.1:7890
+    proxy-uri: http://127.0.0.1:7897
     connect-timeout-millis: 5000
     response-timeout-seconds: 10
     user-agent: Mozilla/5.0
@@ -58,13 +61,13 @@ langchain4j:
   open-ai:
     chat-model:
       base-url: https://api.deepseek.com
-      api-key: 
+      api-key: sk-1537466b7caa418ea3dabcddc2d616c8
       model-name: deepseek-chat
       temperature: 0.3
       timeout: 60s
     streaming-chat-model:
       base-url: https://api.deepseek.com
-      api-key: 
+      api-key: sk-1537466b7caa418ea3dabcddc2d616c8
       model-name: deepseek-chat
       temperature: 0.3
       timeout: 60s

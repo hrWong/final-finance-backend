@@ -15,6 +15,7 @@
         <result column="unrealized_pnl_pct"   property="unrealizedPnlPct"/>
         <result column="portfolio_weight"     property="portfolioWeight"/>
         <result column="last_price"           property="lastPrice"/>
+        <result column="previous_close"       property="previousClose"/>
         <result column="price_as_of"          property="priceAsOf"/>
         <result column="updated_at"           property="updatedAt"/>
     </resultMap>
@@ -42,11 +43,11 @@
         INSERT INTO portfolio_positions (
             portfolio_id, asset_id, quantity, avg_cost, cost_basis,
             market_value, unrealized_pnl, unrealized_pnl_pct,
-            portfolio_weight, last_price, price_as_of, updated_at
+            portfolio_weight, last_price, previous_close, price_as_of, updated_at
         ) VALUES (
             #{portfolioId}, #{assetId}, #{quantity}, #{avgCost}, #{costBasis},
             #{marketValue}, #{unrealizedPnl}, #{unrealizedPnlPct},
-            #{portfolioWeight}, #{lastPrice}, #{priceAsOf}, NOW()
+            #{portfolioWeight}, #{lastPrice}, #{previousClose}, #{priceAsOf}, NOW()
         )
     </insert>
 
@@ -61,6 +62,7 @@
             unrealized_pnl_pct = #{unrealizedPnlPct},
             portfolio_weight   = #{portfolioWeight},
             last_price         = #{lastPrice},
+            previous_close     = #{previousClose},
             price_as_of        = #{priceAsOf},
             updated_at         = NOW()
         WHERE portfolio_id = #{portfolioId}

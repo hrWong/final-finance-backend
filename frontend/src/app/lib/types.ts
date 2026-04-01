@@ -65,6 +65,7 @@ export interface PositionResponse {
   avgCost: number | null;
   costBasis: number | null;
   lastPrice: number | null;
+  previousClose: number | null;
   marketValue: number | null;
   unrealizedPnl: number | null;
   unrealizedPnlPct: number | null;

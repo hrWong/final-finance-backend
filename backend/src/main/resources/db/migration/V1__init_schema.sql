@@ -44,7 +44,9 @@ create table if not exists transactions (
     created_at datetime not null default current_timestamp,
     updated_at datetime not null default current_timestamp on update current_timestamp,
     constraint fk_transactions_portfolio foreign key (portfolio_id) references portfolios (id),
-    constraint fk_transactions_asset foreign key (asset_id) references assets (id)
+    constraint fk_transactions_asset foreign key (asset_id) references assets (id),
+    index idx_transactions_portfolio_trade_date (portfolio_id, trade_date),
+    index idx_transactions_asset_trade_date (asset_id, trade_date)
 );
 
 create table if not exists portfolio_positions (
@@ -63,12 +65,9 @@ create table if not exists portfolio_positions (
     updated_at datetime not null default current_timestamp on update current_timestamp,
     unique key uq_positions_portfolio_asset (portfolio_id, asset_id),
     constraint fk_positions_portfolio foreign key (portfolio_id) references portfolios (id),
-    constraint fk_positions_asset foreign key (asset_id) references assets (id)
+    constraint fk_positions_asset foreign key (asset_id) references assets (id),
+    index idx_positions_portfolio (portfolio_id)
 );
-
-create index idx_transactions_portfolio_trade_date on transactions (portfolio_id, trade_date);
-create index idx_transactions_asset_trade_date on transactions (asset_id, trade_date);
-create index idx_positions_portfolio on portfolio_positions (portfolio_id);
 
 insert into portfolios (id, name, base_currency, is_default, description)
 values (1, 'Default Portfolio', 'USD', true, 'Single-user default portfolio')

@@ -66,7 +66,7 @@ export function MyPositions({ position, portfolio, currency }: MyPositionsProps)
           <div className="space-y-3">
             <div>
               <div className="text-sm text-gray-600 mb-1">Last price</div>
-              <div className="text-sm text-gray-900">{formatMoney(position.lastPrice, displayCurrency)}</div>
+              <div className="text-sm text-gray-900">{formatMoney(position.previousClose || position.lastPrice, displayCurrency)}</div>
             </div>
             <div>
               <div className="text-sm text-gray-600 mb-1">Price as of</div>
