@@ -54,7 +54,7 @@
         FROM transactions
         WHERE portfolio_id = #{portfolioId}
           AND asset_id     = #{assetId}
-        ORDER BY trade_date DESC, id DESC
+        ORDER BY trade_date ASC, id ASC
     </select>
 
     <!-- 新增交易记录 -->
