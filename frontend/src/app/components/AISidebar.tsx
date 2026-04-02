@@ -74,7 +74,7 @@ export function AISidebar({ onClose }: AISidebarProps) {
     setMessages((prev) => [...prev, aiMessage]);
 
     try {
-      const response = await fetch("http://localhost:8080/api/ai/stream-chat", {
+      const response = await fetch("http://localhost:8088/api/ai/stream-chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
